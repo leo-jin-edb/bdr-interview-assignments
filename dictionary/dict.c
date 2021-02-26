@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include "dict.h"
 
 void l(char *word)
 {
-    trie_insert(strdup(word));
+    trie_insert(s_strdup(word));
 }
 
 void load_some_sample_data()
@@ -36,18 +37,34 @@ void load_some_sample_data()
 int main(int argc, char *argv[])
 {
     // better to use getopt or similar
-    allocator_init();
 
     if (argc == 2 && !strcmp(argv[1], "test"))
     {
+        allocator_init_test();
         trie_test();
         return 0;
     }
 
-    load_some_sample_data();
+    if (argc == 2 && !strcmp(argv[1], "load"))
+    {
+        allocator_init_server();
+        tree_init_server();
+        load_some_sample_data();
+        // traverse_and_dump_from_root();
+
+        printf("Server started.\n");
+        while (1)
+        {
+            // traverse_and_dump_from_root();
+            sleep(60);
+        }
+        return 0;
+    }
 
     if (argc == 3)
     {
+        allocator_init_client();
+        tree_init_client();
         char *word = argv[2];
         if (!strcmp(argv[1], "search"))
         {
@@ -79,11 +96,12 @@ int main(int argc, char *argv[])
         }
         if (!strcmp(argv[1], "delete"))
         {
+            trie_delete(word);
             printf("Word deleted.\n");
             return 0;
         }
     }
 
-    printf("Usage: dict [insert|lookup|delete] word.\nOr dict test.\n");
+    printf("Usage: dict load \nThen   dict [insert|lookup|delete] word.\nOr     dict test.\n");
     return 3;
 }

@@ -11,7 +11,7 @@
 
 void traverse_and_dump(struct trie_node_t *parent, int indent);
 
-struct trie_node_t root;
+struct trie_node_t *root;
 
 int trie_slot(char c)
 {
@@ -39,7 +39,7 @@ struct trie_node_t *new_node(struct trie_node_t *parent, char position)
 
 struct trie_node_t *trie_insert(char *value)
 {
-    struct trie_node_t *node = &root;
+    struct trie_node_t *node = root;
 
     char *walk = value;
     while (*walk)
@@ -67,7 +67,7 @@ struct trie_node_t *trie_insert(char *value)
 
 struct trie_node_t *trie_lookup(char *value)
 {
-    struct trie_node_t *node = &root;
+    struct trie_node_t *node = root;
 
     char *walk = value;
     while (*walk)
@@ -122,7 +122,7 @@ int _trie_delete(struct trie_node_t *node, char *value)
 
 void trie_delete(char *value)
 {
-    _trie_delete(&root, value);
+    _trie_delete(root, value);
 }
 
 void traverse_and_dump(struct trie_node_t *parent, int indent)
@@ -133,7 +133,9 @@ void traverse_and_dump(struct trie_node_t *parent, int indent)
     for (i = 0; i <= indent; i++)
         strcat(ind, " ");
 
-    printf("%sNode: %p[%s]\n", ind, parent, parent->value ? parent->value : "<>");
+    // printf("%sNode: %p[%p]\n", ind, parent, parent->value);
+    if (parent->value)
+        printf("%sNode: %p[%s]\n", ind, parent, parent->value ? parent->value : "<>");
     for (i = 0; i < ALPHABET_SIZE; i++)
     {
         if (parent->children[i])
@@ -144,10 +146,31 @@ void traverse_and_dump(struct trie_node_t *parent, int indent)
     }
 }
 
+void traverse_and_dump_from_root()
+{
+    traverse_and_dump(root, 0);
+}
+
+void tree_init_server()
+{
+    root = s_calloc(sizeof(struct trie_node_t));
+    void **root_ptr = trie_root_ptr();
+    *root_ptr = root;
+}
+
+void tree_init_client()
+{
+    root = *(trie_root_ptr());
+    assert(root);
+
+    // traverse_and_dump(root, 0);
+}
+
 #define trie_insert_(a) trie_insert(s_strdup(a))
 void trie_test()
 {
-    // traverse_and_dump(&root, 0);
+    root = s_calloc(sizeof(struct trie_node_t));
+    // traverse_and_dump(root, 0);
 
     assert(trie_lookup("a") == NULL);
     assert(trie_insert_("abcdf") == trie_lookup("abcdf"));
@@ -164,11 +187,16 @@ void trie_test()
     trie_delete("bc");
     trie_delete("bbcdf");
     trie_delete("abcdf");
-    assert(is_leaf_node(&root));
+    assert(is_leaf_node(root));
     assert(trie_insert_("bccdaaaaaaaaf") == trie_lookup("bccdaaaaaaaaf"));
     trie_delete("bccdaaaaaaaaf");
     assert(NULL == trie_lookup("bccdaaaaaaaaf"));
-    assert(is_leaf_node(&root));
+    assert(is_leaf_node(root));
+
+    load_some_sample_data();
+    assert(trie_lookup("abacot"));
+    trie_delete("abacot");
+    assert(NULL == trie_lookup("abacot"));
 
     printf("Tests passed.\n");
 }
