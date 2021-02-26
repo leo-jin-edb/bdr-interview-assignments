@@ -8,6 +8,7 @@ use JSON;
 use Path::Tiny;
 use Data::Dumper;
 use List::Util;
+use Test::More 'no_plan';
 
 my $locks;
 # just quick and dirty load of the source data
@@ -161,17 +162,48 @@ sub pick_least_blocking_query {
   return $min_queries[0];
 }
 
+
+
+sub test_locks_1 {
+    slurp_input("locks_test.json");
+    load_graph();
+    traverse_all_vertices();
+
+    is(pick_most_blocking_query() => 4, "most expensive is 4");
+    ok(pick_least_blocking_query() ~~ [1, 5, 3, 10], "least expensive");
+}
+
+sub test_no_cycle {
+    slurp_input("locks.json");
+    load_graph();
+    traverse_all_vertices();
+
+    is($longest_cycle_weight => -1, "no cycle found");
+}
+
+######################
+sub test {
+    test_locks_1();
+    test_no_cycle{};
+}
 ######################
 sub main {
     slurp_input("locks.json");
     load_graph();
     traverse_all_vertices();
 
-    print "Most  blocking query: ", pick_most_blocking_query(), "\n";
-    print "Least blocking query: ", pick_least_blocking_query(), "\n";
+    if ($longest_cycle_weight > 0) {
+        print "Most  blocking query: ", pick_most_blocking_query(), "\n";
+        print "Least blocking query: ", pick_least_blocking_query(), "\n";
+    } else {
+        print "No deadlock detected."
+    }
     # print Data::Dumper::Dumper(\%edges);
     # print Data::Dumper::Dumper(\%vertices);
     print "Longest cycle: ", Data::Dumper::Dumper(\%longest_cycle);
 }
+######################
+
 
 main();
+# test();
