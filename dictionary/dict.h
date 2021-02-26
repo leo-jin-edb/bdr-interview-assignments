@@ -17,6 +17,8 @@ void **trie_root_ptr();
 void tree_init_server();
 void tree_init_client();
 void load_some_sample_data();
+void trie_lock();
+void trie_unlock();
 
 #define ALPHABET_SIZE 26
 

@@ -50,7 +50,6 @@ int main(int argc, char *argv[])
         allocator_init_server();
         tree_init_server();
         load_some_sample_data();
-        // traverse_and_dump_from_root();
 
         printf("Server started.\n");
         while (1)

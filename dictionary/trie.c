@@ -37,7 +37,7 @@ struct trie_node_t *new_node(struct trie_node_t *parent, char position)
     return child;
 }
 
-struct trie_node_t *trie_insert(char *value)
+struct trie_node_t *_trie_insert(char *value)
 {
     struct trie_node_t *node = root;
 
@@ -65,8 +65,17 @@ struct trie_node_t *trie_insert(char *value)
     return node;
 }
 
-struct trie_node_t *trie_lookup(char *value)
+struct trie_node_t *trie_insert(char *value)
 {
+    trie_lock();
+    struct trie_node_t *p = _trie_insert(value);
+    trie_unlock();
+    return p;
+}
+
+struct trie_node_t *_trie_lookup(char *value)
+{
+
     struct trie_node_t *node = root;
 
     char *walk = value;
@@ -87,6 +96,14 @@ struct trie_node_t *trie_lookup(char *value)
         return node;
     else
         return NULL;
+}
+
+struct trie_node_t *trie_lookup(char *value)
+{
+    trie_lock();
+    struct trie_node_t *p = _trie_lookup(value);
+    trie_unlock();
+    return p;
 }
 
 int is_leaf_node(struct trie_node_t *node)
@@ -122,7 +139,9 @@ int _trie_delete(struct trie_node_t *node, char *value)
 
 void trie_delete(char *value)
 {
+    trie_lock();
     _trie_delete(root, value);
+    trie_unlock();
 }
 
 void traverse_and_dump(struct trie_node_t *parent, int indent)
