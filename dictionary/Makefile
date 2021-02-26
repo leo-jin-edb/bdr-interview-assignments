@@ -1,2 +1,2 @@
 all:
-	gcc trie.c -o dict
+	gcc trie.c dict.c mem.c -o dict

@@ -3,8 +3,11 @@ struct trie_node_t *trie_lookup(char *value);
 void trie_delete(char *value);
 void trie_test();
 
-#define s_calloc(a) calloc(a, 1)
-#define s_free(a) free(a)
+void *s_calloc(int size);
+void *s_malloc(int size);
+void s_free(void *ptr);
+char *s_strdup(char *str);
+void allocator_init();
 
 #define ALPHABET_SIZE 26
 

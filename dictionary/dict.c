@@ -36,6 +36,7 @@ void load_some_sample_data()
 int main(int argc, char *argv[])
 {
     // better to use getopt or similar
+    allocator_init();
 
     if (argc == 2 && !strcmp(argv[1], "test"))
     {
@@ -64,7 +65,7 @@ int main(int argc, char *argv[])
         }
         if (!strcmp(argv[1], "insert"))
         {
-            struct trie_node_t *n = trie_insert(word);
+            struct trie_node_t *n = trie_insert(s_strdup(word));
             if (n)
             {
                 printf("Word added [%s]\n", n->value);

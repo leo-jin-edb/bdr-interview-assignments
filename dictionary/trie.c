@@ -2,21 +2,13 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include "dict.h"
 
 /* Simple trie management. Note that the functions take owenership of any strings passed.
 
    In this simple case, there is one global trie.
    */
-#define s_calloc(a) calloc(a, 1)
-#define s_free(a) free(a)
 
-#define ALPHABET_SIZE 26
-
-struct trie_node_t
-{
-    struct trie_node_t *children[ALPHABET_SIZE];
-    char *value;
-};
 void traverse_and_dump(struct trie_node_t *parent, int indent);
 
 struct trie_node_t root;
@@ -63,6 +55,12 @@ struct trie_node_t *trie_insert(char *value)
         }
         walk++;
     }
+    if (node->value)
+    {
+        /* alrady there */
+        assert(!strcmp(node->value, value));
+        return NULL;
+    }
     node->value = value;
     return node;
 }
@@ -71,9 +69,10 @@ struct trie_node_t *trie_lookup(char *value)
 {
     struct trie_node_t *node = &root;
 
-    while (*value)
+    char *walk = value;
+    while (*walk)
     {
-        int slot = trie_slot(*value);
+        int slot = trie_slot(*walk);
         if (node->children[slot])
         {
             node = node->children[slot];
@@ -82,9 +81,12 @@ struct trie_node_t *trie_lookup(char *value)
         {
             return NULL;
         }
-        value++;
+        walk++;
     }
-    return node;
+    if (node->value && !strcmp(value, node->value))
+        return node;
+    else
+        return NULL;
 }
 
 int is_leaf_node(struct trie_node_t *node)
@@ -131,20 +133,25 @@ void traverse_and_dump(struct trie_node_t *parent, int indent)
     for (i = 0; i <= indent; i++)
         strcat(ind, " ");
 
+    printf("%sNode: %p[%s]\n", ind, parent, parent->value ? parent->value : "<>");
     for (i = 0; i < ALPHABET_SIZE; i++)
     {
         if (parent->children[i])
         {
+            printf("%s%c:\n", ind, trie_unslot(i));
             traverse_and_dump(parent->children[i], indent + 1);
         }
     }
 }
 
-#define trie_insert_(a) trie_insert(strdup(a))
+#define trie_insert_(a) trie_insert(s_strdup(a))
 void trie_test()
 {
+    // traverse_and_dump(&root, 0);
+
     assert(trie_lookup("a") == NULL);
     assert(trie_insert_("abcdf") == trie_lookup("abcdf"));
+    assert(trie_lookup("a") == NULL);
     assert(trie_insert_("bbcdf") == trie_lookup("bbcdf"));
     assert(trie_insert_("bc") == trie_lookup("bc"));
     assert(trie_insert_("bccdaaaaaaaaf") == trie_lookup("bccdaaaaaaaaf"));
@@ -164,9 +171,4 @@ void trie_test()
     assert(is_leaf_node(&root));
 
     printf("Tests passed.\n");
-}
-
-int main()
-{
-    trie_test();
 }
