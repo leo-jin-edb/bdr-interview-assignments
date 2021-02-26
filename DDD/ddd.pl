@@ -20,20 +20,7 @@ sub slurp_input {
 
 # print %$locks;
 
-# Notes:
-# 1. We are looking for a deadlock; and that means a cycle in the directed graph of locks.
-# 2. The graph may be disconnected (and usually is).
-# 3. There can be more cycles. They can even be connected.
-# 4. We find the longest cycle (as solving that will unblock the most queries and will
-#    give us the best choice of queries to select from); note that here "cycle" includes
-#    alternate paths, too (forks and joins). 
-# 5. pick the query to kill:
-#    a. either pick the one that blocks the most other queries - this will unblock
-#       more other queries
-#    b. or pick one that blocks the least. 
-#    The idea is that query (a) will be probably a large one and rolling it back is 
-#    expensive and will take long. So killing (b) will be faster and will allow the
-#    cycle to unwind more naturally.
+
 
 # graph vertex: (queryId), data = aux data: visited, etc.
 # graph edge: (from, to), data = weight = count of edges in the source lock file
