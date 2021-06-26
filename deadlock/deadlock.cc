@@ -9,8 +9,6 @@
 
 #include "graph.h"
 
-enum State {NOT_VISITED, VISITING, VISITED};
-
 using namespace std;
 using Tuple=tuple<int, int, string>;  // holder, requestor, object.
 
