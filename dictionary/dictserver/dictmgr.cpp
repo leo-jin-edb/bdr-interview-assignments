@@ -126,4 +126,9 @@ bool DictMgr::searchcommon(string word, list<string> words, list<string>::iterat
     return (it != words.end());
 }
 
+DictMgr::~DictMgr() {
+    delete[] wordlist;
+    delete[] mutlist;
+}
+
 

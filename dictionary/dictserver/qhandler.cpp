@@ -11,7 +11,6 @@ QHandler::QHandler(DictMgr* dict) {
     hdlrs = new thread[NUM_THREADS];
     for (int i = 0; i < NUM_THREADS; i++) {
         hdlrs[i] = thread(&run, i);
-        hdlrs[i].join();
     }
 }
 
@@ -57,6 +56,8 @@ void QHandler::run() {
         case QUIT:
             rval = true;
             finished = true;
+            qcv.notify_all();   // let all threads know it's time to exit
+            break;
         default:
             rval = false; // error
             break;
@@ -75,4 +76,16 @@ void QHandler::run() {
         }
     }
     return;
+}
+
+QHandler::~QHandler() {
+    if (!finished) {
+        finished = true;
+        qcv.notify_all();
+        for (int i = 0; i < NUM_THREADS; i++) {
+            hdlrs->join();
+        }
+        delete[] hdlrs;
+        delete dictq;
+    }
 }
