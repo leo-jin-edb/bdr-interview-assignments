@@ -1,137 +1,128 @@
 /** This server program is used to manage a dictionary of English words
-  * Words may be added, removed, and searched for.
-  * The dictionary is saved to a flat file upon normal exit and
-  * restored on restart.
-  * The dictionary is managed through receiving requests on a TCP/IP socket.
-  * The requests are then put in a queue to be concurrently handled by a 
-  * thread pool.
-  **/
-  #include <map>
-  #include <cstdio>
-  #include <Winsock2.h>
-  #include <ws2tcpip.h>
-  #include <sstream>
-  #include "dictmgr.hpp"
-  #include "qhandler.hpp"
+ * Words may be added, removed, and searched for.
+ * The dictionary is saved to a flat file upon normal exit and
+ * restored on restart.
+ * The dictionary is managed through receiving requests on a TCP/IP socket.
+ * The requests are then put in a queue to be concurrently handled by a
+ * thread pool.
+ **/
+#include <map>
+#include <iostream>
+#include <cstdio>
+#include <sstream>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <unistd.h>
+#include "dictmgr.hpp"
+#include "qhandler.hpp"
 
-  #define DEFAULT_BUFLEN 512
-  #define DEFAULT_PORT "27027"
+#define DEFAULT_BUFLEN 512
+#define DEFAULT_PORT 27027
 
-  int main() {
-      DictMgr *mgr = new DictMgr(std::string("dictionary"));
-      QHandler *handler = new QHandler(mgr);
-      SOCKET listenSock;
+int main(int argc, char* argv[]) {
+	DictMgr *mgr = new DictMgr(std::string("dictionary"));
+	QHandler *handler = new QHandler(mgr);
+	SOCKET listenSock;
+	struct sockaddr_in serv_addr;
+	char recvbuf[DEFAULT_BUFLEN];
+	int recvbuflen = DEFAULT_BUFLEN;
+	std::cout << "Dictionary initialized... establishing communications" << std::endl;
 
-      // we're initialized, so now just set up a channel and wait for requests
-      struct addrinfo *result = NULL;
-      struct addrinfo hints;
+	// we're initialized, so now just set up a channel and wait for requests
+	listenSock = socket(AF_INET, SOCK_STREAM, 0);
+	if (listenSock < 0) {
+		perror("Error opening socket");
+		return listenSock;
+	}
 
-      int iSendResult;
-      char recvbuf[DEFAULT_BUFLEN];
-      int recvbuflen = DEFAULT_BUFLEN;
-      WSADATA wsaData;
-      int iResult;
+	bzero((void*)&serv_addr, sizeof(serv_addr));
 
+	/* setup the host_addr structure for use in bind call */
+	// server byte order
+	serv_addr.sin_family = AF_INET;
 
-      // Initialize Winsock
-      iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-      if (iResult != 0)
-      {
-        printf("WSAStartup failed with error: %d\n", iResult);
-        return 1;
-      }
+	// automatically be filled with current host's IP address
+	serv_addr.sin_addr.s_addr = INADDR_ANY;
 
-      ZeroMemory(&hints, sizeof(hints));
-      hints.ai_family = AF_INET;
-      hints.ai_socktype = SOCK_STREAM;
-      hints.ai_protocol = IPPROTO_TCP;
-      hints.ai_flags = AI_PASSIVE;
+	// convert short integer value for port must be converted into network byte order
+	serv_addr.sin_port = htons(DEFAULT_PORT);
 
-      // Resolve the server address and port
-      iResult = getaddrinfo(NULL, DEFAULT_PORT, &hints, &result);
-      if (iResult != 0)
-      {
-        printf("getaddrinfo failed with error: %d\n", iResult);
-        WSACleanup();
-        return 1;
-      }
+	std::cout << "Binding to socket" << std::endl;
 
-      // Create a SOCKET for connecting to server
-      listenSock = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+	if (bind(listenSock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+		perror("ERROR on binding");
+		return -1;
+	}
 
-          // Setup the TCP listening socket
-    iResult = bind( listenSock, result->ai_addr, (int)result->ai_addrlen);
-    if (iResult == SOCKET_ERROR) {
-        printf("bind failed with error: %d\n", WSAGetLastError());
-        freeaddrinfo(result);
-        closesocket(listenSock);
-        WSACleanup();
-        return 1;
-    }
+	listen(listenSock, SOMAXCONN);
+	std::cout << "Listening on socket" << std::endl;
 
-    freeaddrinfo(result);
+	while (!handler->isFinished()) {
 
-    while (!handler->isFinished()) {
-      iResult = listen(listenSock, SOMAXCONN);
-      if (iResult == SOCKET_ERROR)
-      {
-        printf("listen failed with error: %d\n", WSAGetLastError());
-        continue;
-      }
+		// Accept a client socket
+		SOCKET clientSock = accept(listenSock, NULL, NULL);
+		std::cout << "Accepted a client" << std::endl;
+		if (clientSock < 0)
+		{
+			perror("accept failed");
+			continue;
+		}
+		std::string req;
+		while (true) {
+			int n = recv(clientSock, recvbuf, recvbuflen - 1, 0);
+			std::ostringstream oss;
+			oss << "Received " << n << " bytes: " << recvbuf << std::endl;
+			std::cout << oss.str();
+			if (n > 0) {
+				bool incomplete = false;
+				if (recvbuf[n-1] != '\0') {
+					recvbuf[n] = '\0';
+					incomplete = true;
+				}
+				req += std::string(recvbuf);
+				if (!incomplete)
+					break;
+				continue;
 
-      // Accept a client socket
-      SOCKET clientSock = accept(listenSock, NULL, NULL);
-      if (clientSock == INVALID_SOCKET)
-      {
-        printf("accept failed with error: %d\n", WSAGetLastError());
-        continue;
-      }
-      std::string req;
-      while (true) {
-        iResult = recv(clientSock, recvbuf, recvbuflen - 1, 0);
-        if (iResult > 0) {
-          if (recvbuf[iResult-1] != '\0') {
-            recvbuf[iResult] = '\0';
-            req += std::string(recvbuf);
-            continue;
-          }
-          break;
-        } else {
-          printf("incomplete message received from client");
-          closesocket(clientSock);
-          clientSock = INVALID_SOCKET;
-          break;
-        }
-    }
-    if (clientSock != INVALID_SOCKET) {  // we got a full message
-      // A good message should be a string with an action and optionally a word
-      // Note that clientSock will be closed by handler.
-      std::stringstream reqstr(req);
-      std::string action;
-      std::string word;
-      getline(reqstr, action, ' ');
-      getline(reqstr, word, ' ');
-      QHandler::ACTION eact;
-      if (action == "insert") {
-        eact = QHandler::ACTION::INSERT;
-        break;
-      } else if (action == "delete") {
-        eact = QHandler::ACTION::REMOVE;
-        break;
-      } else if (action == "search") {
-        eact = QHandler::ACTION::SEARCH;
-        break;
-      } else if (action == "save") {
-        eact = QHandler::ACTION::SAVE;
-        break;
-      } else if (action == "quit") {
-        eact = QHandler::ACTION::QUIT;
-        break;
-      } else {
-        eact = QHandler::ACTION::INVALID;
-        break;
-      }
-      handler->queueReq(eact, clientSock, word);
-    }
-    continue;
-  }
+			} else {
+				printf("incomplete message received from client");
+				close(clientSock);
+				clientSock = -1;
+				break;
+			}
+		}
+		std::cout << "Received request: " << req << std::endl;
+		if (clientSock != -1) {  // we got a full message
+			// A good message should be a string with an action and optionally a word
+			// Note that clientSock will be closed by handler.
+			std::istringstream reqstr(req);
+			std::string action;
+			std::string word;
+			getline(reqstr, action, ' ');
+			getline(reqstr, word, ' ');
+			std::cout << "Got action " << action << std::endl;
+			std::cout << "Got word " << word << std::endl;
+			QHandler::ACTION eact;
+			if (action == "insert") {
+				eact = QHandler::ACTION::INSERT;
+			} else if (action == "delete") {
+				eact = QHandler::ACTION::REMOVE;
+			} else if (action == "search") {
+				eact = QHandler::ACTION::SEARCH;
+			} else if (action == "save") {
+				eact = QHandler::ACTION::SAVE;
+			} else if (action == "quit") {
+				eact = QHandler::ACTION::QUIT;
+			} else {
+				eact = QHandler::ACTION::INVALID;
+			}
+			handler->queueReq(eact, clientSock, word);
+		}
+		continue;
+	}
+	std::cout << "We're outa here" << std::endl;
+	return 0;
+}
+

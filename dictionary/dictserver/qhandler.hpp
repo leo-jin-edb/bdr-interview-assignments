@@ -8,8 +8,10 @@
  #include <iostream>
  #include <thread>
  #include <condition_variable>
- #include <Winsock2.h>
+ #include <mutex>
  #include "dictmgr.hpp"
+
+typedef int SOCKET;
 
  class QHandler {
    public:
@@ -32,8 +34,7 @@
           dictaction(action),
           dictword(word) {};
     };
-    QHandler(DictMgr* dict)
-      : dictionary(dict) {};
+    QHandler(DictMgr* dict);
     ~QHandler();
     bool queueReq(ACTION action, int sock, std::string word);
     bool isFinished() { return finished;}

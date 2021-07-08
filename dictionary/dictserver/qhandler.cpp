@@ -1,24 +1,32 @@
 /** Implementation of the qhandler class **/
+#include <cstring>
+#include <sys/socket.h>
+#include <unistd.h>
 #include "qhandler.hpp"
 
 using namespace std;
 
 #define NUM_THREADS 5
 
-QHandler::QHandler(DictMgr* dict) {
+QHandler::QHandler(DictMgr* dict)
+	: dictionary(dict) {
     finished = false;
     dictq = new queue<DictRequest*>();
     hdlrs = new thread[NUM_THREADS];
     for (int i = 0; i < NUM_THREADS; i++) {
-        hdlrs[i] = thread(&run, i);
+        hdlrs[i] = thread(&run, this);
     }
 }
 
 bool QHandler::queueReq(ACTION action, int sock, string word) {
     DictRequest* req = new DictRequest(action, sock, word);
+    cout << "Got the dict request: " << word << endl;
     {
-        lock_guard(qmut);
+        unique_lock<mutex> lck(qmut);
+        cout << "Got the mutex to push onto queue\n";
         dictq->push(req);
+        cout << "Pushed request onto queue\n";
+        lck.unlock();
     }
     qcv.notify_one();
     return true;
@@ -28,11 +36,14 @@ void QHandler::run() {
     // thread needs to get the queue semaphore and then wait until there is something in the queue
     // Once something is in the queue, it pops it, releases the lock and then processes the request
     // When the request is done, it returns success or failure on the socket listed in the request
+	cout << "Thread running" << endl;
     while (!finished) {
+    	cout << "Thread locking..." << endl;
         unique_lock<mutex> qlock(qmut);
-        qlock.lock();
+       // qlock.lock();
         while (dictq->empty() && !finished)
         {
+        	cout << "Thread waiting..." << endl;
             qcv.wait(qlock);
         }
         DictRequest *req = dictq->front();
@@ -44,10 +55,10 @@ void QHandler::run() {
         case INSERT:
             rval = dictionary->insert(req->dictword);
             break;
-        case SEARCH:
+        case REMOVE:
             rval = dictionary->remove(req->dictword);
             break;
-        case REMOVE:
+        case SEARCH:
             rval = dictionary->find(req->dictword);
             break;
         case SAVE:
@@ -63,22 +74,24 @@ void QHandler::run() {
             break;
         }
         // now send result back to client
-        static char *success = "success";
-        static char *failure = "failed";
+        static const char *success = "success";
+        static const char *failure = "failed";
         // send the null at the end of the string
         if (rval)
         {
-            send(req->socket, success, strlen(success) + 1, 0);
+            send(req->socket, success, (int)strlen(success) + 1, 0);
         }
         else
         {
-            send(req->socket, failure, strlen(failure) + 1, 0);
+            send(req->socket, failure, (int)strlen(failure) + 1, 0);
         }
+        close(req->socket);
     }
     return;
 }
 
 QHandler::~QHandler() {
+	cout << "Destroying queue and handlers" << endl;
     if (!finished) {
         finished = true;
         qcv.notify_all();
