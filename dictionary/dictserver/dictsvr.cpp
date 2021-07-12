@@ -49,21 +49,17 @@ int main(int argc, char* argv[]) {
 	// convert short integer value for port must be converted into network byte order
 	serv_addr.sin_port = htons(DEFAULT_PORT);
 
-	std::cout << "Binding to socket" << std::endl;
-
 	if (bind(listenSock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
 		perror("ERROR on binding");
 		return -1;
 	}
 
 	listen(listenSock, SOMAXCONN);
-	std::cout << "Listening on socket" << std::endl;
 
 	while (!handler->isFinished()) {
 
 		// Accept a client socket
 		SOCKET clientSock = accept(listenSock, NULL, NULL);
-		std::cout << "Accepted a client" << std::endl;
 		if (clientSock < 0)
 		{
 			perror("accept failed");
@@ -73,8 +69,6 @@ int main(int argc, char* argv[]) {
 		while (true) {
 			int n = recv(clientSock, recvbuf, recvbuflen - 1, 0);
 			std::ostringstream oss;
-			oss << "Received " << n << " bytes: " << recvbuf << std::endl;
-			std::cout << oss.str();
 			if (n > 0) {
 				bool incomplete = false;
 				if (recvbuf[n-1] != '\0') {
@@ -93,7 +87,6 @@ int main(int argc, char* argv[]) {
 				break;
 			}
 		}
-		std::cout << "Received request: " << req << std::endl;
 		if (clientSock != -1) {  // we got a full message
 			// A good message should be a string with an action and optionally a word
 			// Note that clientSock will be closed by handler.
@@ -102,8 +95,6 @@ int main(int argc, char* argv[]) {
 			std::string word;
 			getline(reqstr, action, ' ');
 			getline(reqstr, word, ' ');
-			std::cout << "Got action " << action << std::endl;
-			std::cout << "Got word " << word << std::endl;
 			QHandler::ACTION eact;
 			if (action == "insert") {
 				eact = QHandler::ACTION::INSERT;
@@ -122,7 +113,6 @@ int main(int argc, char* argv[]) {
 		}
 		continue;
 	}
-	std::cout << "We're outa here" << std::endl;
 	return 0;
 }
 

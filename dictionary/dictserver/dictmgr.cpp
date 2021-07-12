@@ -31,7 +31,6 @@ DictMgr::DictMgr(string dictpath)
     wordlist = new list<string>[HASHSIZE];
     FILE* dictfile = fopen(filename.c_str(), "r");
     char readbuf[READSIZE];
-    cout << "In DictMgr constructor\n";
     if (dictfile == NULL) {
         printf("No dictionary present.\n");
     } else {
@@ -43,7 +42,6 @@ DictMgr::DictMgr(string dictpath)
             int len = strlen(readbuf);
             for (--len; readbuf[len] == '\r' || readbuf[len] == '\n'; --len) {
             	readbuf[len] = '\0';
-            	cout << "Getting rid of newlines";
             }
             insertNoLock(readbuf);
             count++;
@@ -96,7 +94,6 @@ bool DictMgr::insertNoLock(string word, int hashval) {
 	if (hashval < 0) {
 		hashval = hash<string>{}(word) % HASHSIZE;
 	}
-    cout << hashval << endl;
     bool rval;
     list<string>* bucket = &(wordlist[hashval]);
     if (searchcommon(word, bucket)) {
@@ -107,10 +104,6 @@ bool DictMgr::insertNoLock(string word, int hashval) {
         bucket->push_back(word);
         cout << "Inserted " << word << endl;
         rval = true;
-    }
-    cout << "Words in this bucket are:\n";
-    for (list<string>::iterator it = bucket->begin(); it != bucket->end(); it++) {
-    	cout << *it << endl;
     }
     return rval;
 }
@@ -134,17 +127,12 @@ bool DictMgr::remove(string word) {
 
 bool DictMgr::find(string word) {
     int hashval = hash<string>{}(word) % HASHSIZE;
-    cout << hashval << endl;
     bool rval;
     mutlist[hashval].lock();
     list<string>* bucket = &wordlist[hashval];
     rval = searchcommon(word, bucket);
     if (rval == false) {
         printf("%s not found in dictionary\n", word.c_str());
-        cout << "Words in this bucket are:\n";
-        for (list<string>::iterator it = bucket->begin(); it != bucket->end(); ++it) {
-        	cout << *it << endl;
-        }
     }
     mutlist[hashval].unlock();
     return rval;

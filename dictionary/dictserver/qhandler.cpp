@@ -23,9 +23,7 @@ bool QHandler::queueReq(ACTION action, int sock, string word) {
     cout << "Got the dict request: " << word << endl;
     {
         unique_lock<mutex> lck(qmut);
-        cout << "Got the mutex to push onto queue\n";
         dictq->push(req);
-        cout << "Pushed request onto queue\n";
         lck.unlock();
     }
     qcv.notify_one();
@@ -36,14 +34,11 @@ void QHandler::run() {
     // thread needs to get the queue semaphore and then wait until there is something in the queue
     // Once something is in the queue, it pops it, releases the lock and then processes the request
     // When the request is done, it returns success or failure on the socket listed in the request
-	cout << "Thread running" << endl;
     while (!finished) {
-    	cout << "Thread locking..." << endl;
         unique_lock<mutex> qlock(qmut);
        // qlock.lock();
         while (dictq->empty() && !finished)
         {
-        	cout << "Thread waiting..." << endl;
             qcv.wait(qlock);
         }
         DictRequest *req = dictq->front();
