@@ -92,11 +92,11 @@ int main(int argc, char* argv[]) {
             printf(recvbuf);
             if (strcmp(recvbuf,"failed") == 0) {
                 rval = -1;
-                printf("Request failed\n");
+                printf("\nRequest failed\n");
             }
             else if (strcmp(recvbuf,"success") == 0) {
                 rval = 0;
-                printf("Request succeeded\n");
+                printf("\nRequest succeeded\n");
             }
         }
         else if ( n == 0 ) {
