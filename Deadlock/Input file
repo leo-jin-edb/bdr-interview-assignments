@@ -1,0 +1,41 @@
+##### three machines having 3 processes in each machines and check wether deadlock is present depending on the loop
+##### m1 (p0, p1, p2) ----> m2 (p3, p4, p5)  ----> m3 (p6, p7, p8)
+
+
+Enter the number of machines present
+3
+Enter total number of processes in machine1
+3
+Enter total number of processes in machine2
+3
+Enter total number of processes in machine3
+3
+Total number of processes in eacH machine 1 are 3
+Total number of processes in eacH machine 2 are 3
+Total number of processes in eacH machine 3 are 3
+Enter the machine no. and process id for which deadlock detection should be initiated
+0
+0
+Enter the processes of two different machines connected with requested edge
+8
+0
+Probe message is (0, 8, 0)Deadlock detected
+#####################################################
+Enter the number of machines present
+3
+Enter total number of processes in machine1
+3
+Enter total number of processes in machine2
+3
+Enter total number of processes in machine3
+3
+Total number of processes in eacH machine 1 are 3
+Total number of processes in eacH machine 2 are 3
+Total number of processes in eacH machine 3 are 3
+Enter the machine no. and process id for which deadlock detection should be initiated
+0
+0
+Enter the processes of two different machines connected with requested edge
+4
+6
+Probe message is (0, 4, 6)Deadlock not present
