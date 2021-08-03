@@ -1,0 +1,4 @@
+networkx
+
+# only required for drawing graphs
+matplotlib

@@ -1,0 +1,10 @@
+def build(ctx):
+    """
+    Build the project.
+    """
+
+    ctx.stlib(
+        target='libdictdb',
+        source=['src/protocol.cpp'],
+        includes='./include/libdictdb',
+        export_includes='./include')

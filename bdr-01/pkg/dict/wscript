@@ -1,0 +1,9 @@
+def build(ctx):
+    """
+    Build the project.
+    """
+
+    ctx.program(
+        target='dict',
+        source=['main.cpp'],
+        use='libdictdb')
