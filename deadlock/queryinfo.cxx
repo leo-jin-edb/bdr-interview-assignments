@@ -131,6 +131,7 @@ bool QueryInfo::detectDeadlock()
             }
             std::cout << std::endl;
             _deadLockList.clear();
+
         }
     }
 
