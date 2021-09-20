@@ -1,30 +1,20 @@
 #include "nodepool.h"
 #include <unistd.h>
 
-#define errExit(msg)    do { perror(msg); exit(EXIT_FAILURE); \
-                        } while (0)
-
-FreeNodePool::FreeNodePool()
-{  
-
-}
-
-FreeNodePool::~FreeNodePool()
-{
-
-}
-
 void FreeNodePool::Init()
 {
+     //Create free node linked list.
     for(int i = 0; i < MAX_WORD_COUNT-1; i++)
     {
         _nodePool[i]._index = i;
         _nodePool[i]._next = i+1;
     }
     _freeNode = 0;
-
     if (sem_init(&_freeNodePoolSem, 1, 1) == -1)
-        errExit("sem_init-sem1");
+    {
+        perror("Free node pool Sem init failed.");
+        exit(EXIT_FAILURE);
+    }
 }
 
 node* FreeNodePool::GetFreeNode()

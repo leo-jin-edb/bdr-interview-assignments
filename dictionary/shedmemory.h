@@ -5,6 +5,9 @@
 #include <sys/stat.h>        /* For mode constants */
 #include <fcntl.h>           /* For O_* constants */
 
+/*
+Class to create, map and release shared memory.
+*/
 class ShedMemory
 {
 public:
@@ -15,10 +18,10 @@ public:
     void  ReleaseShedMemory();
 	
 private:
-    int 	_shmFD;
-    char*	_shmPtr;
-    char	_shmName[20];
-    unsigned long _shmMemSize;
+    int            _shmFD;
+    char*          _shmPtr;
+    char	   _shmName[20];
+    unsigned long  _shmMemSize;
 };
 
 

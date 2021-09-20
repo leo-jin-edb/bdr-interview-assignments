@@ -26,56 +26,56 @@ bool SingleCharDictionary::insertword(std::string const&str)
     bool ret;
 	
     sem_wait(&_rwMutex);
-	ret = _charHash.insertword(str);
-	sem_post(&_rwMutex);
-	
-	return ret;
+    ret = _charHash.insertword(str);
+    sem_post(&_rwMutex);
+    
+    return ret;
 }
 
 bool SingleCharDictionary::searchword(std::string const&str)
 {
     bool ret;
 	
-	sem_wait(&_rMutex);
-	_readerCount++;
-	
-	if(_readerCount == 1)
-	{
-	    sem_wait(&_rwMutex);
-	}
-	
-	sem_post(&_rMutex);
-	
-	ret = _charHash.searchword(str);
-	
-	sem_wait(&_rMutex);
-	_readerCount--;
-	
-	if(_readerCount == 0)
-	{
-	    sem_post(&_rwMutex);
-	}
-	
-	sem_post(&_rMutex);
-	return ret;
+    sem_wait(&_rMutex);
+    _readerCount++;
+    
+    if(_readerCount == 1)
+    {
+        sem_wait(&_rwMutex);
+    }
+    
+    sem_post(&_rMutex);
+    
+    ret = _charHash.searchword(str);
+    
+    sem_wait(&_rMutex);
+    _readerCount--;
+    
+    if(_readerCount == 0)
+    {
+        sem_post(&_rwMutex);
+    }
+    
+    sem_post(&_rMutex);
+    return ret;
 }
 
-node* SingleCharDictionary::deleteword(std::string const&str)
+bool SingleCharDictionary::deleteword(std::string const&str)
 {
-    node* tempNode;
+    bool ret;
 	
     sem_wait(&_rwMutex);
-	tempNode = _charHash.deleteword(str);
-	sem_post(&_rwMutex);
-	
-	return tempNode;
+    ret = _charHash.deleteword(str);
+    sem_post(&_rwMutex);
+    
+    return ret;
 }
 
 void SingleCharDictionary::Print()
 {
-	sem_wait(&_rwMutex);
-	_charHash.Print();
-	sem_post(&_rwMutex);
+    sem_wait(&_rwMutex);
+    _charHash.Print();
+    sem_post(&_rwMutex);
 }
 
 void Dictionary::Init(bool alreadyExist)
@@ -87,13 +87,11 @@ void Dictionary::Init(bool alreadyExist)
         {
             _charDictionary[i].Init(&_nodePool);
         }
-        _initialized = 101;
     } else {
         for(int i = 0; i < MAX_CHAR; i++)
         {
             _charDictionary[i].SetNodePool(&_nodePool);
         }
-        
     }
 }
 
@@ -101,9 +99,8 @@ bool Dictionary::insertword(std::string str)
 {
 	transform(str.begin(), str.end(), str.begin(), ::tolower);
 	
-	int index = str[0] - 97;
+	int index = str[0] - 97;     //Always insert word in lowercase
 	return _charDictionary[index].insertword(str);
-    
 }
 
 bool Dictionary::searchword(std::string str)
@@ -119,14 +116,7 @@ bool Dictionary::deleteword(std::string str)
 	transform(str.begin(), str.end(), str.begin(), ::tolower);
 	
 	int index = str[0] - 97;
-	node* tempNode = _charDictionary[index].deleteword(str);
-	if(tempNode)
-	{
-	    _nodePool.ReleaseFreeNode(tempNode);
-            return true;
-	}
-	
-	return false;
+	return _charDictionary[index].deleteword(str);
 }
 
 void Dictionary::Print()
