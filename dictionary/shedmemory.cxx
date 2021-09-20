@@ -9,10 +9,6 @@
 #include <cstring>
 #include <iostream>
 
-#define errExit(msg)    do { perror(msg); exit(EXIT_FAILURE); \
-                        } while (0)
-
-
 #define SHMPATH "inmemdict"
 
 ShedMemory::ShedMemory(unsigned long size)
@@ -38,16 +34,20 @@ char* ShedMemory::GetShedMemory(bool &alreadyExist)
     } else {
         _shmFD = shm_open(SHMPATH, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
         if (_shmFD == -1)
-           errExit("shm_open");
+        {
+            perror("Shared memory open failed.");
+            exit(EXIT_FAILURE);
+        }
 
         if (ftruncate(_shmFD, _shmMemSize) == -1)
-           errExit("ftruncate");
-
-    
+        {
+            perror("Shared memory truncate failed.");
+            exit(EXIT_FAILURE);
+        }
     }
     						 
      _shmPtr = (char*)mmap(NULL, _shmMemSize,PROT_READ | PROT_WRITE, MAP_SHARED, _shmFD, 0);
-     std::cout << "_shmPtr " << std::hex << (unsigned long)_shmPtr << std::endl;
+    // std::cout << "_shmPtr " << std::hex << (unsigned long)_shmPtr << std::endl;
      return _shmPtr;
 
 }

@@ -5,13 +5,25 @@
 #include "dictionary.h"
 #include "shedmemory.h"
 
+void usage()
+{
+     fprintf(stderr, "\nUsage: ./dict [-i word] [-d word] [-s word] [-r]\n");
+     fprintf(stderr, "-i word : insert word in dictionary\n");
+     fprintf(stderr, "-d word : delete word in dictionary\n");
+     fprintf(stderr, "-s word : search word in dictionary\n");
+     fprintf(stderr, "-r : erase shared memory\n");
+     fprintf(stderr, "-p : Print dictionary\n");
+     exit(EXIT_FAILURE);
+
+}
+
 int main(int argc , char* argv[])
 {
     int opt;
     bool removeMem = false;
-    char* word;
     bool alreadyExist = false;
     ShedMemory shm(sizeof(Dictionary));
+
     Dictionary* dict = 0;
     char* ptr =  shm.GetShedMemory(alreadyExist);
     if(!alreadyExist)
@@ -22,7 +34,7 @@ int main(int argc , char* argv[])
     }
     dict->Init(alreadyExist);
     
-    while ((opt = getopt(argc, argv, "i:d:s:r")) != -1) {
+    while ((opt = getopt(argc, argv, "i:d:s:rp")) != -1) {
            switch (opt) {
            case 'd':
                dict->deleteword(optarg);
@@ -37,14 +49,12 @@ int main(int argc , char* argv[])
                removeMem = true;
                shm.ReleaseShedMemory();
                break;
+           case 'p':
+               dict->Print();
+               break;
            default: /* '?' */
-               fprintf(stderr, "Usage: %s [-i word] [-d word] [-s word] [-r]\n",
-                       argv[0]);
-               exit(EXIT_FAILURE);
+               usage();
            }
        }
-    if(!removeMem)
-        dict->Print();
     return 0;
-
 }

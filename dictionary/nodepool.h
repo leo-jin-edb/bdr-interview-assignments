@@ -25,8 +25,7 @@ class FreeNodePool
 {
 
 public:
-    FreeNodePool(); 
-    ~FreeNodePool();
+    FreeNodePool() = default; 
     void Init();
     
     node* GetFreeNode();

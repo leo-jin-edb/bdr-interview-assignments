@@ -41,7 +41,7 @@ bool SimpleHash::insertword(std::string const& str)
     	tempNode->_next = _simpleHashTable[hashval];
     	
         _simpleHashTable[hashval] = tempNode->_index;
-        cout << " str " << tempNode->_word << " hashval " << hashval << " is inserting" << endl;
+        cout << " Word " << tempNode->_word << " is inserted." << endl;
     	return true;
     }
     return false;
@@ -60,16 +60,16 @@ bool SimpleHash::isPresent(const char* str, unsigned int hashval)
     {
         if( !strcmp(str, tempNode->_word))
         {
-            cout << " str " << str << " hashval " << hashval << " is present" << endl;
+            cout << " Word " << str << " found in dictionary." << endl;
     	    return true;
         }
     	tempNode = _nodePool->GetNode(tempNode->_next);
     }
-    cout << " str " << str << " hashval " << hashval << " is not present" << endl;
+    cout << " Word " << str << " not present in dictionary." << endl;
     return false;
 }
 
-node* SimpleHash::deleteword(std::string const& str)
+bool SimpleHash::deleteword(std::string const& str)
 {
     unsigned int hashval = computeHash(str.c_str());
     node* prevNode = 0;
@@ -81,21 +81,22 @@ node* SimpleHash::deleteword(std::string const& str)
     	{
     	    if(prevNode)
             {
-                cout << " str " << tempNode->_word << " hashval " << hashval << " is deleting" << endl;
+                cout << " Word " << tempNode->_word << " is deleting." << endl;
                 prevNode->_next = tempNode->_next;
             }
             else
             {
-                cout << " str " << tempNode->_word << " hashval " << hashval << " is deleting" << endl;
+                cout << " Word " << tempNode->_word << " is deleting." << endl;
                 _simpleHashTable[hashval] = ~0;
             }
-            return tempNode;
+	    _nodePool->ReleaseFreeNode(tempNode);
+            return true;
         }
         prevNode = tempNode;
         tempNode = _nodePool->GetNode(tempNode->_next);
     }
-    cout << " str " << tempNode->_word << " hashval " << hashval << " is not able to delete" << endl;
-    return 0;
+    cout << " Word " << str << " not present in dictionary." << endl;
+    return false;
 }
 
 void SimpleHash::Print()
