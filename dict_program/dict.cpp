@@ -3,10 +3,23 @@
 #include <string>
 #include <string.h>
 #include <algorithm>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <pthread.h>
 
 using namespace std;
 
 #define MAX_CHILDREN_PER_NODE  26 // we are assuming only 26 alphabets
+#define MAX_SUPPORT_WORDS      1000000 // right now total word we support is 1M
+typedef struct MapHdr
+{
+    int maxWordsCnt;
+    int curWordsCnt;
+    pthread_mutex_t lock;
+
+}MapHdr;
 
 typedef struct DictNode
 {
@@ -25,16 +38,30 @@ typedef enum operationType
 
 
 
-/* create trienode */
-DictNode* createNode()
+/* create Dictionary Node */
+DictNode* createNode(void** pBasePtr)
 {
+   MapHdr *pMapHdr = (MapHdr*)(*pBasePtr);
+   DictNode *rootPtr = (DictNode*)((char*)pBasePtr + sizeof(MapHdr));
 
+   if (pMapHdr->curWordsCnt >= pMapHdr->maxWordsCnt)
+   {
+       fprintf(stderr, "dictionary only support maximum: [%d] words\n",  pMapHdr->maxWordsCnt);
+       return NULL;
+   }
+   pthread_mutex_lock(&(pMapHdr->lock));
+   pMapHdr->curWordsCnt += 1;
+   DictNode *newNode = &rootPtr[pMapHdr->curWordsCnt];
+   pthread_mutex_unlock(&(pMapHdr->lock));
+
+#if 0
    DictNode *newNode = (DictNode*) malloc(sizeof(DictNode));
    if (NULL == newNode)
    {
        fprintf(stderr, "failed to allocate memory for trienode.\n");
        return NULL;
    }
+#endif
    
    for (int idx = 0; idx < MAX_CHILDREN_PER_NODE; idx++)
    {
@@ -45,9 +72,11 @@ DictNode* createNode()
 }
 
 /*insert word into dictionary */
-bool insertWordIntoDict(DictNode *rootNode, const char *word)
+bool insertWordIntoDict(void *pBasePtr, const char *word)
 {
 
+   MapHdr *pMapHdr = (MapHdr*)pBasePtr;
+   DictNode *rootNode = (DictNode*)((char*)pBasePtr + sizeof(MapHdr));
    DictNode *pCurrNode = rootNode;
 
    /* inserting  a word but rootnode of dict is NULL*/
@@ -69,7 +98,7 @@ bool insertWordIntoDict(DictNode *rootNode, const char *word)
    {
        if (NULL == pCurrNode->children[word[idx] - 'a'])
        {
-            pCurrNode->children[word[idx] - 'a'] = createNode();
+            pCurrNode->children[word[idx] - 'a'] = createNode(&pBasePtr);
             if (!pCurrNode->children[word[idx] - 'a'])
             {
                 fprintf(stderr, "failed to crate intermediatry node for dict.\n");
@@ -84,10 +113,13 @@ bool insertWordIntoDict(DictNode *rootNode, const char *word)
 
 
 /*search element from dict */
-bool findWordInDict(DictNode *rootNode, const char* word)
+bool findWordInDict(void *pBasePtr, const char* word)
 {
+   MapHdr *pMapHdr = (MapHdr*)pBasePtr;
+   DictNode *rootNode = (DictNode*)((char*)pBasePtr + sizeof(MapHdr));
+   DictNode *pCurrNode = rootNode;
    int idx = 0;
-   DictNode *pCurrNode = NULL;
+  // DictNode *pCurrNode = NULL;
 
    if (!rootNode)
    {
@@ -170,7 +202,8 @@ bool DeleteWordFromDict(DictNode** rootNode, const char* word,
 
         if (!hasChildren(*rootNode))
         {
-           free(*rootNode);
+           //free(*rootNode);
+           memset((*rootNode), 0, sizeof(DictNode));
            *rootNode = NULL;
            //pChildNode = NULL;
            //rootNode->children[word[cur_idx] - 'a'] = NULL;
@@ -178,6 +211,45 @@ bool DeleteWordFromDict(DictNode** rootNode, const char* word,
     } 
    return true;
 }
+
+/*intialize the shared memory during process bootup */
+void* initalizeMapCtx(const char* filepath, int maxWrdsSupport)
+{
+
+   int fd = open(filepath, O_CREAT |O_RDWR |O_SYNC, 0666);
+   if (fd < 0)
+   {
+       perror("failed to open the file");
+       return NULL;
+   }
+
+   int total_size = ((sizeof(DictNode) * maxWrdsSupport) + sizeof(MapHdr));
+
+   void *pBaseAddr = mmap(NULL, total_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+   if(pBaseAddr == MAP_FAILED)
+   {
+        perror("Mapping Failed\n");
+        return NULL;
+    }
+
+    if (ftruncate(fd, total_size) < 0)
+    {
+        perror("failed to truncate the file.\n");
+        return NULL;
+    }
+
+    close(fd);
+    memset(pBaseAddr, 0, total_size);
+
+    /* update share meemory header */
+    MapHdr stMapHdr;
+    stMapHdr.maxWordsCnt = maxWrdsSupport;
+    stMapHdr.curWordsCnt = 0;
+    pthread_mutex_init(&(stMapHdr.lock), NULL);
+    memcpy(pBaseAddr, &stMapHdr, sizeof(MapHdr));
+    return pBaseAddr;
+}
+
 #define MAX_INPUT_STR_LEN 200
 #define VALIDATE_INPUT_WORD(pInputWord) \
    if (!pInputWord)\
@@ -198,12 +270,20 @@ int main(int argc, char** argv)
    bool      bWordEnd = false;
    DictNode *pChildNode = NULL;
 
-  pRootNode = createNode();  
-  if (!pRootNode)
-  {
-     fprintf(stderr, "Failed to allocate memory for dictionary node.\n");
-     return -1;
-  }
+   void* pBasePtr = initalizeMapCtx("dict_map", MAX_SUPPORT_WORDS);
+   MapHdr *pMapHdr = (MapHdr*)pBasePtr;
+   //pMapHdr->maxWordsCnt = MAX_SUPPORT_WORDS;
+   //pMapHdr->curWordsCnt = 0; 
+
+   if (pMapHdr->curWordsCnt == 0)
+   {
+      pRootNode = createNode(&pBasePtr);  
+      if (!pRootNode)
+      {
+         fprintf(stderr, "Failed to allocate memory for dictionary node.\n");
+         return -1;
+      }
+   }
 
   fprintf(stdout, "please povide: <insert/delete/search/quit> <word>\n");
   while (true)
@@ -221,7 +301,7 @@ int main(int argc, char** argv)
      if (!strncmp(sOpration, "insert", min(strlen("insert"), strlen(sOpration)))) 
      {
         VALIDATE_INPUT_WORD(pInputWord);
-        if (insertWordIntoDict(pRootNode, pInputWord))
+        if (insertWordIntoDict(pBasePtr, pInputWord))
             fprintf(stdout, "[%s]: word is inserted successfully.\n\n", pInputWord);
         else
             fprintf(stderr, "[%s]: word insert failed.\n\n", pInputWord);
@@ -230,7 +310,8 @@ int main(int argc, char** argv)
      {
          bWordEnd = false;
          VALIDATE_INPUT_WORD(pInputWord);
-        
+         pRootNode = (DictNode*)((char*)pBasePtr + sizeof(MapHdr));
+      
         if (DeleteWordFromDict(&pRootNode, pInputWord, 0, bWordEnd))
             fprintf(stdout, "word: [%s] is deleted successfully.\n\n", pInputWord);
         else 
@@ -240,7 +321,7 @@ int main(int argc, char** argv)
      {
         
         VALIDATE_INPUT_WORD(pInputWord);
-        if (findWordInDict(pRootNode, pInputWord))
+        if (findWordInDict(pBasePtr, pInputWord))
         {
            fprintf(stdout, "[%s]: word found in dictionary.\n\n", pInputWord);
         }
@@ -260,6 +341,13 @@ int main(int argc, char** argv)
       fprintf(stderr, "wrong operation is provided\n\n");
       fprintf(stdout, "please povide: <insert/delete/search/quit> <word>\n\n");
     }
+   }
+
+   if (pBasePtr)
+   {
+      int total_size = ((sizeof(DictNode) * MAX_SUPPORT_WORDS) + sizeof(MapHdr));
+      pthread_mutex_destroy(&(pMapHdr->lock));
+      (void*)munmap(pBasePtr, total_size);
    }
    return 0;
 

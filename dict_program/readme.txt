@@ -5,7 +5,7 @@ download folder to your local linux Box. now follow the below
 steps for compiltion.
 
 
-g++ dict.cpp
+g++ dict.cpp -lpthread
 
 
 
