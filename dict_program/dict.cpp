@@ -215,23 +215,23 @@ bool DeleteWordFromDict(DictNode** rootNode, const char* word,
 /*intialize the shared memory during process bootup */
 void* initalizeMapCtx(const char* filepath, int maxWrdsSupport)
 {
-
+#if 0
    int fd = open(filepath, O_CREAT |O_RDWR |O_SYNC, 0666);
    if (fd < 0)
    {
        perror("failed to open the file");
        return NULL;
    }
-
+#endif
    int total_size = ((sizeof(DictNode) * maxWrdsSupport) + sizeof(MapHdr));
 
-   void *pBaseAddr = mmap(NULL, total_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+   void *pBaseAddr = mmap(NULL, total_size, PROT_READ|PROT_WRITE, MAP_ANON | MAP_SHARED, -1, 0);
    if(pBaseAddr == MAP_FAILED)
    {
         perror("Mapping Failed\n");
         return NULL;
     }
-
+#if 0
     if (ftruncate(fd, total_size) < 0)
     {
         perror("failed to truncate the file.\n");
@@ -239,6 +239,7 @@ void* initalizeMapCtx(const char* filepath, int maxWrdsSupport)
     }
 
     close(fd);
+#endif
     memset(pBaseAddr, 0, total_size);
 
     /* update share meemory header */
@@ -301,10 +302,14 @@ int main(int argc, char** argv)
      if (!strncmp(sOpration, "insert", min(strlen("insert"), strlen(sOpration)))) 
      {
         VALIDATE_INPUT_WORD(pInputWord);
+
+        pthread_mutex_lock(&(pMapHdr->lock));        
         if (insertWordIntoDict(pBasePtr, pInputWord))
             fprintf(stdout, "[%s]: word is inserted successfully.\n\n", pInputWord);
         else
             fprintf(stderr, "[%s]: word insert failed.\n\n", pInputWord);
+        pthread_mutex_unlock(&(pMapHdr->lock));
+
      }
      else if (!strncmp("delete", sOpration, min(strlen("delete"), strlen(sOpration))))
      {
@@ -312,15 +317,19 @@ int main(int argc, char** argv)
          VALIDATE_INPUT_WORD(pInputWord);
          pRootNode = (DictNode*)((char*)pBasePtr + sizeof(MapHdr));
       
+        pthread_mutex_lock(&(pMapHdr->lock));
         if (DeleteWordFromDict(&pRootNode, pInputWord, 0, bWordEnd))
             fprintf(stdout, "word: [%s] is deleted successfully.\n\n", pInputWord);
         else 
             fprintf(stdout, "word: [%s] deletion failed.\n\n", pInputWord);
+        pthread_mutex_unlock(&(pMapHdr->lock));
      }
      else if (!strncmp("search", sOpration, min(strlen("search"), strlen(sOpration))))
      {
         
         VALIDATE_INPUT_WORD(pInputWord);
+         
+        pthread_mutex_lock(&(pMapHdr->lock));
         if (findWordInDict(pBasePtr, pInputWord))
         {
            fprintf(stdout, "[%s]: word found in dictionary.\n\n", pInputWord);
@@ -329,6 +338,7 @@ int main(int argc, char** argv)
         {
            fprintf(stdout, "[%s]: word dosnot exist in dictionary.\n\n", pInputWord);
         }
+        pthread_mutex_unlock(&(pMapHdr->lock));
 
     }
     else if (!strncmp("quit", sOpration, min(strlen("quit"), strlen(sOpration))))
