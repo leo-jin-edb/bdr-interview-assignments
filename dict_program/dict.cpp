@@ -96,18 +96,24 @@ bool insertWordIntoDict(void *pBasePtr, const char *word)
    /* process each character from the input word and add to dict */
    for (int idx = 0; idx < strlen(word); idx++)
    {
+       pthread_mutex_lock(&(pMapHdr->lock));
        if (NULL == pCurrNode->children[word[idx] - 'a'])
        {
             pCurrNode->children[word[idx] - 'a'] = createNode(&pBasePtr);
             if (!pCurrNode->children[word[idx] - 'a'])
             {
                 fprintf(stderr, "failed to crate intermediatry node for dict.\n");
+                pthread_mutex_unlock(&(pMapHdr->lock));
                 return false;       
             }
        }
        pCurrNode = pCurrNode->children[word[idx] - 'a'];
+       pthread_mutex_unlock(&(pMapHdr->lock));
    } 
+
+   pthread_mutex_lock(&(pMapHdr->lock)); 
    pCurrNode->bWordEnd = true;
+   pthread_mutex_unlock(&(pMapHdr->lock));
    return true;
 }
 
@@ -161,11 +167,12 @@ bool hasChildren(DictNode *rootNode)
  *           2 <ab>
  *           3. <abcd>
  * */
-bool DeleteWordFromDict(DictNode** rootNode, const char* word,
+bool DeleteWordFromDict(DictNode** rootNode, void* pBasePtr,
+                       const char* word,
                        int cur_idx, bool &bFoundWord)
 {
-    bool ret = true;
-
+     bool ret = true;
+     MapHdr *pMapHdr = (MapHdr*)pBasePtr;   
    
      if (!*rootNode)
      {
@@ -181,7 +188,7 @@ bool DeleteWordFromDict(DictNode** rootNode, const char* word,
     if (word[cur_idx]) //do recursivly still we reach end of the word
     {
         rootNode = &((*rootNode)->children[word[cur_idx] - 'a']);
-        ret = DeleteWordFromDict(rootNode, word, cur_idx + 1, bFoundWord);       
+        ret = DeleteWordFromDict(rootNode, pBasePtr, word, cur_idx + 1, bFoundWord);       
         if (!ret)
         {
            return ret;
@@ -191,15 +198,23 @@ bool DeleteWordFromDict(DictNode** rootNode, const char* word,
         if (!bFoundWord)
         {
            bFoundWord = true;
+           
            if (false == ((*rootNode)->bWordEnd))
            {
               fprintf(stderr, "Delete word: [%s] doesn't exist in dictionary.\n\n", word);
               return false;
            }
+
+           pthread_mutex_lock(&(pMapHdr->lock));
            (*rootNode)->bWordEnd = false;
+           pthread_mutex_unlock(&(pMapHdr->lock));
            
         }
-
+        
+        /* delete operation making some chnages to critical section
+         * use lock for the protection.  
+         **/
+        pthread_mutex_lock(&(pMapHdr->lock));
         if (!hasChildren(*rootNode))
         {
            //free(*rootNode);
@@ -208,6 +223,7 @@ bool DeleteWordFromDict(DictNode** rootNode, const char* word,
            //pChildNode = NULL;
            //rootNode->children[word[cur_idx] - 'a'] = NULL;
         }
+        pthread_mutex_unlock(&(pMapHdr->lock));
     } 
    return true;
 }
@@ -303,12 +319,12 @@ int main(int argc, char** argv)
      {
         VALIDATE_INPUT_WORD(pInputWord);
 
-        pthread_mutex_lock(&(pMapHdr->lock));        
+        //pthread_mutex_lock(&(pMapHdr->lock));        
         if (insertWordIntoDict(pBasePtr, pInputWord))
             fprintf(stdout, "[%s]: word is inserted successfully.\n\n", pInputWord);
         else
             fprintf(stderr, "[%s]: word insert failed.\n\n", pInputWord);
-        pthread_mutex_unlock(&(pMapHdr->lock));
+        //pthread_mutex_unlock(&(pMapHdr->lock));
 
      }
      else if (!strncmp("delete", sOpration, min(strlen("delete"), strlen(sOpration))))
@@ -317,19 +333,20 @@ int main(int argc, char** argv)
          VALIDATE_INPUT_WORD(pInputWord);
          pRootNode = (DictNode*)((char*)pBasePtr + sizeof(MapHdr));
       
-        pthread_mutex_lock(&(pMapHdr->lock));
-        if (DeleteWordFromDict(&pRootNode, pInputWord, 0, bWordEnd))
+        //pthread_mutex_lock(&(pMapHdr->lock));
+        if (DeleteWordFromDict(&pRootNode, pBasePtr, pInputWord, 0, bWordEnd))
             fprintf(stdout, "word: [%s] is deleted successfully.\n\n", pInputWord);
         else 
             fprintf(stdout, "word: [%s] deletion failed.\n\n", pInputWord);
-        pthread_mutex_unlock(&(pMapHdr->lock));
+        //pthread_mutex_unlock(&(pMapHdr->lock));
      }
      else if (!strncmp("search", sOpration, min(strlen("search"), strlen(sOpration))))
      {
         
         VALIDATE_INPUT_WORD(pInputWord);
          
-        pthread_mutex_lock(&(pMapHdr->lock));
+        /* search operation is read operation only,no need to take lock*/
+        //pthread_mutex_lock(&(pMapHdr->lock));
         if (findWordInDict(pBasePtr, pInputWord))
         {
            fprintf(stdout, "[%s]: word found in dictionary.\n\n", pInputWord);
@@ -338,7 +355,7 @@ int main(int argc, char** argv)
         {
            fprintf(stdout, "[%s]: word dosnot exist in dictionary.\n\n", pInputWord);
         }
-        pthread_mutex_unlock(&(pMapHdr->lock));
+        //pthread_mutex_unlock(&(pMapHdr->lock));
 
     }
     else if (!strncmp("quit", sOpration, min(strlen("quit"), strlen(sOpration))))
