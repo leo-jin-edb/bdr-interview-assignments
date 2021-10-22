@@ -23,6 +23,7 @@ typedef struct MapHdr
 
 typedef struct DictNode
 {
+  pthread_mutex_t childrenLock[MAX_CHILDREN_PER_NODE];
   DictNode *children[MAX_CHILDREN_PER_NODE];
   bool     bWordEnd;
 
@@ -42,7 +43,8 @@ typedef enum operationType
 DictNode* createNode(void** pBasePtr)
 {
    MapHdr *pMapHdr = (MapHdr*)(*pBasePtr);
-   DictNode *rootPtr = (DictNode*)((char*)pBasePtr + sizeof(MapHdr));
+   //DictNode *rootPtr = (DictNode*)(*(char*)pBasePtr + sizeof(MapHdr));
+   DictNode *rootPtr = (DictNode*)(pMapHdr + 1);
 
    if (pMapHdr->curWordsCnt >= pMapHdr->maxWordsCnt)
    {
@@ -51,7 +53,7 @@ DictNode* createNode(void** pBasePtr)
    }
    pthread_mutex_lock(&(pMapHdr->lock));
    pMapHdr->curWordsCnt += 1;
-   DictNode *newNode = &rootPtr[pMapHdr->curWordsCnt];
+   DictNode *newNode = rootPtr+ (pMapHdr->curWordsCnt);
    pthread_mutex_unlock(&(pMapHdr->lock));
 
 #if 0
@@ -67,6 +69,12 @@ DictNode* createNode(void** pBasePtr)
    {
         newNode->children[idx] = NULL;
    }
+
+   for (int idx = 0; idx < MAX_CHILDREN_PER_NODE; idx++)
+   {
+       pthread_mutex_init(&(newNode->childrenLock[idx]), NULL);
+   }
+
    newNode->bWordEnd = false; 
    return newNode; 
 }
@@ -77,7 +85,9 @@ bool insertWordIntoDict(void *pBasePtr, const char *word)
 
    MapHdr *pMapHdr = (MapHdr*)pBasePtr;
    DictNode *rootNode = (DictNode*)((char*)pBasePtr + sizeof(MapHdr));
+   //DictNode *rootNode = (DictNode*)(pMapHdr + sizeof(MapHdr));
    DictNode *pCurrNode = rootNode;
+   DictNode *pTempNode = NULL;
 
    /* inserting  a word but rootnode of dict is NULL*/
   /* if (!pCurrNode)
@@ -96,24 +106,23 @@ bool insertWordIntoDict(void *pBasePtr, const char *word)
    /* process each character from the input word and add to dict */
    for (int idx = 0; idx < strlen(word); idx++)
    {
-       pthread_mutex_lock(&(pMapHdr->lock));
+       pthread_mutex_lock(&(pCurrNode->childrenLock[word[idx] - 'a']));
        if (NULL == pCurrNode->children[word[idx] - 'a'])
        {
             pCurrNode->children[word[idx] - 'a'] = createNode(&pBasePtr);
             if (!pCurrNode->children[word[idx] - 'a'])
             {
                 fprintf(stderr, "failed to crate intermediatry node for dict.\n");
-                pthread_mutex_unlock(&(pMapHdr->lock));
+		pthread_mutex_unlock(&(pCurrNode->childrenLock[word[idx] - 'a']));
                 return false;       
             }
        }
-       pCurrNode = pCurrNode->children[word[idx] - 'a'];
-       pthread_mutex_unlock(&(pMapHdr->lock));
+       pTempNode = pCurrNode->children[word[idx] - 'a'];
+       pthread_mutex_unlock(&(pCurrNode->childrenLock[word[idx] - 'a']));
+       pCurrNode = pTempNode;
    } 
 
-   pthread_mutex_lock(&(pMapHdr->lock)); 
    pCurrNode->bWordEnd = true;
-   pthread_mutex_unlock(&(pMapHdr->lock));
    return true;
 }
 
@@ -187,10 +196,14 @@ bool DeleteWordFromDict(DictNode** rootNode, void* pBasePtr,
     /*come to end of the word */
     if (word[cur_idx]) //do recursivly still we reach end of the word
     {
-        rootNode = &((*rootNode)->children[word[cur_idx] - 'a']);
-        ret = DeleteWordFromDict(rootNode, pBasePtr, word, cur_idx + 1, bFoundWord);       
+        pthread_mutex_lock(&((*rootNode)->childrenLock[word[cur_idx] - 'a']));
+        DictNode** newRootNode = &((*rootNode)->children[word[cur_idx] - 'a']);
+        ret = DeleteWordFromDict(newRootNode,
+                                 pBasePtr, word, 
+                                 cur_idx + 1, bFoundWord);       
         if (!ret)
         {
+	   pthread_mutex_unlock(&((*rootNode)->childrenLock[word[cur_idx] - 'a']));
            return ret;
         }
         //rootNode->children[word[cur_idx] - 'a'] = pChildNode;
@@ -199,31 +212,41 @@ bool DeleteWordFromDict(DictNode** rootNode, void* pBasePtr,
         {
            bFoundWord = true;
            
-           if (false == ((*rootNode)->bWordEnd))
+           //if (false == ((*rootNode)->bWordEnd))
+           if (false == ((*newRootNode)->bWordEnd))
            {
+              pthread_mutex_unlock(&((*rootNode)->childrenLock[word[cur_idx] - 'a']));
               fprintf(stderr, "Delete word: [%s] doesn't exist in dictionary.\n\n", word);
               return false;
            }
 
-           pthread_mutex_lock(&(pMapHdr->lock));
-           (*rootNode)->bWordEnd = false;
-           pthread_mutex_unlock(&(pMapHdr->lock));
+           //pthread_mutex_lock(&(pMapHdr->lock));
+           (*newRootNode)->bWordEnd = false;
+           //pthread_mutex_unlock(&(pMapHdr->lock));
            
         }
         
         /* delete operation making some chnages to critical section
          * use lock for the protection.  
          **/
-        pthread_mutex_lock(&(pMapHdr->lock));
-        if (!hasChildren(*rootNode))
+        //pthread_mutex_lock(&(pMapHdr->lock));
+        if (!hasChildren(*newRootNode))
         {
+           pthread_mutex_unlock(&((*newRootNode)->childrenLock[word[cur_idx] - 'a']));
            //free(*rootNode);
-           memset((*rootNode), 0, sizeof(DictNode));
-           *rootNode = NULL;
+           for (int idx = 0; idx < MAX_CHILDREN_PER_NODE; idx++)
+           {
+               pthread_mutex_destroy(&((*newRootNode)->childrenLock[idx]));
+
+           }
+           memset((*newRootNode), 0, sizeof(DictNode));
+           *newRootNode = NULL;
            //pChildNode = NULL;
            //rootNode->children[word[cur_idx] - 'a'] = NULL;
+           //return true;
         }
-        pthread_mutex_unlock(&(pMapHdr->lock));
+        //pthread_mutex_unlock(&(pMapHdr->lock));
+        pthread_mutex_unlock(&((*rootNode)->childrenLock[word[cur_idx] - 'a']));
     } 
    return true;
 }
