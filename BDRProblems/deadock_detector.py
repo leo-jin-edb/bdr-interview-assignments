@@ -2,7 +2,7 @@ from collections import defaultdict
 
 # For each strongly connected component, find all elementary
 # cycles. 
-def simple_cycles(G):
+def simple_cycles(G, sccs):
     def _unblock(thisnode, blocked, B):
         stack = set([thisnode])
         while stack:
@@ -12,7 +12,6 @@ def simple_cycles(G):
                 stack.update(B[node])
                 B[node].clear()
     G = {v: set(nbrs) for (v,nbrs) in G.items()} # make a copy of the graph
-    sccs = strongly_connected_components(G)
     while sccs:
         scc = sccs.pop()
         startnode = scc.pop()
@@ -21,7 +20,9 @@ def simple_cycles(G):
         closed = set()
         blocked.add(startnode)
         B = defaultdict(set)
-        stack = [ (startnode,list(G[startnode])) ]
+        stack = []
+        if startnode in G:
+            stack = [ (startnode,list(G[startnode])) ]
         while stack:
             thisnode, nbrs = stack[-1]
             if nbrs:
@@ -30,8 +31,9 @@ def simple_cycles(G):
                     yield path[:]
                     closed.update(path)
                 elif nextnode not in blocked:
+                    ll = list(G[nextnode]) if nextnode in G else []
                     path.append(nextnode)
-                    stack.append( (nextnode,list(G[nextnode])) )
+                    stack.append( (nextnode,ll) )
                     closed.discard(nextnode)
                     blocked.add(nextnode)
                     continue
@@ -39,12 +41,14 @@ def simple_cycles(G):
                 if thisnode in closed:
                     _unblock(thisnode,blocked,B)
                 else:
-                    for nbr in G[thisnode]:
-                        if thisnode not in B[nbr]:
-                            B[nbr].add(thisnode)
+                    if (thisnode in G):
+                        for nbr in G[thisnode]:
+                            if thisnode not in B[nbr]:
+                                B[nbr].add(thisnode)
                 stack.pop()
                 path.pop()
-        remove_node(G, startnode)
+        if (startnode in G):
+            remove_node(G, startnode)
         H = subgraph(G, set(scc))
         sccs.extend(strongly_connected_components(H))
 
@@ -69,8 +73,10 @@ def strongly_connected_components(graph):
         lowlink[node] = index_counter[0]
         index_counter[0] += 1
         stack.append(node)
+        successors = []
     
-        successors = graph[node]
+        if (node in graph):
+            successors = graph[node]
         for successor in successors:
             if successor not in index:
                 _strong_connect(successor)
@@ -109,20 +115,31 @@ def subgraph(G, vertices):
 ##example:
 
 dict = {
+    # "node1": { "obj1": [1, 2, 5], "obj2": [2, 3], "obj3": [3, 1, 2, 4, 6], "obj4": [4, 5], "obj5": [5, 2], "obj6": [6, 4]}
     "node1": { "obj1": [1, 2, 5], "obj2": [2, 3], "obj3": [3, 1, 2, 4, 6], "obj4": [4, 5], "obj5": [5, 2], "obj6": [6, 4], "obj7": [8, 9], "obj8": [9, 8], "obj10": [7] }
     # "node2": { "obj1": [5, 4] },
     # "node3": { "obj2": [3, 5] }
 }
 
+# dict = {
+#     "node1": { "obj1": [1, 3], "obj2": [4, 10] },
+#     "node2": { "obj1": [5, 4] },
+#     "node3": { "obj2": [3, 5, 1] }
+# }
+
 graph = {}
 
 for node, objs in dict.items():
-    graph = {}
     for obj, qids in objs.items():
         graph[qids[0]] = qids[1:]
-    t = list(simple_cycles(graph))
+sccs = strongly_connected_components(graph)
+for scc in sccs:
+    t = list(simple_cycles(graph, [scc]))
     flat_list = [item for sublist in t for item in sublist]
-    query_to_kill = most_common = max(flat_list, key = flat_list.count)
+    if (len(flat_list)):
+        query_to_kill = most_common = max(flat_list, key = flat_list.count)
+        print("query to kill: {}".format(query_to_kill))
+    else:
+        print("No deadlocks detected")
 
-    print("Node: {}, query to kill: {}".format(node, query_to_kill))
 
