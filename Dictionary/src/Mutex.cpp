@@ -29,30 +29,9 @@ int Mutex::init()
 	return 0;
 }
 
-#ifdef CUSTOM_LOCK
-int TSL(Lock *lock)
-{
-	int*  lw;
-	int   res;
-	lw = (int*)lock;
-	if (*lock == 1) return 1;
-
-	// This assembly is Version3. Working fine for now
-	__asm__ __volatile__(
-		"xchgl %0, %1 \n\t"
-		: "=r"(res), "=m"(*lock)
-		: "0"(1), "m"(*lock)
-		: "memory"); 
-
-	//fprintf(stderr,"after asm %d ret %d\n", *lock, res);
-
-	return(res);
-}
-#endif
-
 int Mutex::tryShareLock(int tryTimes, int waitmsecs,bool share, bool upgrade)
 {
-	int ret=0;
+	int ret = 0;
 #ifdef CUSTOM_LOCK
 	int oldValue = (int)lock;
 	if (oldValue >= 0  && share)
@@ -127,7 +106,7 @@ int Mutex::getShareLock()
 	ret = tryShareLock(0, 0, true, false);
 	return ret;
 #else
-        printf ("Mutex taken %p\n", this);
+        //printf ("Mutex taken %p\n", this);
 	ret = pthread_mutex_lock(&mutex_);
 #endif
 	if (ret == 0) 
@@ -145,7 +124,7 @@ int Mutex::getExclusiveLock(bool upgrade)
 #else
         if (!upgrade)
 	{
-                printf ("Mutex taken %p\n", this);
+                //printf ("Mutex taken %p\n", this);
 		ret = pthread_mutex_lock(&mutex_);
 	}
 #endif
@@ -191,7 +170,7 @@ int Mutex::releaseLock()
 		}
 	}
 #else
-                printf ("Mutex release %p\n", this);
+        //printf ("Mutex release %p\n", this);
 	ret = pthread_mutex_unlock(&mutex_);
 #endif
 	if (ret == 0) 
@@ -219,7 +198,12 @@ int Mutex::recoverMutex()
 #endif
 	return ret;
 }
-
+void Mutex::print()
+{
+#ifdef CUSTOM_LOCK
+    printf("Value of Lock %d\n", lock);
+#endif
+}
 int Mutex::CAS(int *ptr, int oldVal, int newVal)
 {
 #ifdef CUSTOM_LOCK
@@ -246,7 +230,7 @@ int Mutex::CAS(int *ptr, int oldVal, int newVal)
 				: "=q" (ret), "=m" (*ptr)
 				: "r" (newVal), "m" (*ptr), "a" (oldVal)
 				: "memory");
-		//if (ret) return 0;  else {printf("DEBUG::CAS Fails %d-\n", ret); return 1; }
+		//if (ret) return 0;  else {printf("CAS Fails %d-\n", ret); return 1; }
 		if (ret) return 0;  else return 1;
 #else
 	return 0;

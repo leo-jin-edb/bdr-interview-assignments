@@ -1,7 +1,7 @@
 COMP := g++ -g 
 DEBUG := 
 LDFLAGS :=  
-OPTI := 
+OPTI := -DCUSTOM_LOCK 
 INCL := 
 
 LIBS :=  -lnsl -lrt -lpthread 

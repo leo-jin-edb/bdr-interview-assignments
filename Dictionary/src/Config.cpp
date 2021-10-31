@@ -26,12 +26,6 @@ int Config::storeKeyVal(char *key, char *value)
            { cVal.mutexUSecs = atoi(value);  }
     else if (strcasestr(key, "MUTEX_TIMEOUT_RETRIES") != NULL)
            { cVal.mutexRetries = atoi(value);  }
-    else if (strcasestr(key, "LOCK_TIMEOUT_SECS") != NULL)
-           { cVal.lockSecs = atoi(value);  }
-    else if (strcasestr(key, "LOCK_TIMEOUT_USECS") != NULL)
-           { cVal.lockUSecs = atoi(value);  }
-    else if (strcasestr(key, "LOCK_TIMEOUT_RETRIES") != NULL)
-           { cVal.lockRetries = atoi(value);  }
     else  return 1;
     return 0;
 }
@@ -44,21 +38,6 @@ int Config::validateValues()
         return 1;
     }
     
-    if (cVal.lockSecs < 0 || cVal.lockSecs > 360)
-    {
-        printf (  "LOCK_TIMEOUT_SECS should be >= 0 and <= 360\n");
-        return 1;
-    }
-    if (cVal.lockUSecs < 0 || cVal.lockUSecs > 1000000)
-    {
-        printf (  "LOCK_TIMEOUT_USECS should be >= 0 and <= 1000000\n");
-        return 1;
-    }
-    if (cVal.lockRetries < 0 || cVal.lockRetries > 100)
-    {
-        printf (  "LOCK_TIMEOUT_RETRY should be >= 0 and <= 100\n");
-        return 1;
-    }
     if (cVal.mutexSecs < 0 || cVal.mutexSecs > 360)
     {
         printf (  "MUTEX_TIMEOUT_SECS should be >= 0 and <= 360\n");
@@ -132,9 +111,6 @@ void Config::print()
 {
     printf("ConfigValues\n");
     printf(" getShmKey %d\n", getShmKey());
-    printf(" getLockSecs %d\n", getLockSecs());
-    printf(" getLockUSecs %d\n", getLockUSecs());
-    printf(" getLockRetries %d\n", getLockRetries());
     printf(" getMutexSecs %d\n", getMutexSecs());
     printf(" getMutexUSecs %d\n", getMutexUSecs());
     printf(" getMutexRetries %d\n", getMutexRetries());

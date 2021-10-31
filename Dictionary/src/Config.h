@@ -16,10 +16,6 @@ class ConfigValues
      
     int shmKey;
     
-    int lockSecs;
-    int lockUSecs;
-    int lockRetries;
-
 
     int mutexSecs;
     int mutexUSecs;
@@ -29,14 +25,9 @@ class ConfigValues
     {
         shmKey = 2222;
  
-        lockSecs =0;
-        lockUSecs = 10;
-        lockRetries = 10;
-		
 	mutexSecs=0;
         mutexUSecs=10;
         mutexRetries = 10;
-       
     }
 };
 
@@ -57,9 +48,6 @@ class Config
    
     inline int getShmKey() { return cVal.shmKey; }
 	
-    inline int getLockSecs() { return cVal.lockSecs; }
-    inline int getLockUSecs() { return cVal.lockUSecs; }
-    inline int getLockRetries() { return cVal.lockRetries; }
     inline int getMutexSecs() { return cVal.mutexSecs; }
     inline int getMutexUSecs() { return cVal.mutexUSecs; }
     inline int getMutexRetries() { return cVal.mutexRetries; }

@@ -32,7 +32,7 @@ class  Mutex
     int recoverMutex();
 
     static int CAS(int *ptr, int oldVal, int newVal);
-
+    void print();
 };
 
 #endif
