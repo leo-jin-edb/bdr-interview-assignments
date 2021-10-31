@@ -25,7 +25,7 @@ TODO:
 -----------------------------------------------
 | SM_META| DATANODE_INDEX| DATA_NODE|DATA_NODE|...
 -----------------------------------------------
-2. Use custom mutex for higher concrrency
+2. Use custom mutex for higher concrrency and sucessfull mutex check
 3. Documentation
 4. Test script
 5. Bug fix
