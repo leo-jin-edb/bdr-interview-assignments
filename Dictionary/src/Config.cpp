@@ -60,15 +60,18 @@ int Config::readAllValues(const char *fileName)
 {
     if (isLoaded) 
     {
-    	return 0;
+        return 0;
     }
     FILE *fp = NULL;
     if (fileName == NULL || 0 == strcmp(fileName, "")) 
-    	fileName = DEFAULT_CONFIG_FILE;
+    {
+        fileName = DEFAULT_CONFIG_FILE;
+    }
     fp = fopen(fileName,"r");
-    if( fp == NULL ) {
+    if( fp == NULL ) 
+    {
         printf ("Invalid path/filename\n");
-	return 1;
+        return 1;
     }
 
     int hasData = 1;
@@ -78,7 +81,6 @@ int Config::readAllValues(const char *fileName)
     while (hasData)
     {
         memset(buffer, 0, 1024);
-        //int ret = fscanf(fp,"%s\r",buffer);
         int ret = readLine(fp, buffer);
         if (ret == EOF) break;
         bool isComment= false;

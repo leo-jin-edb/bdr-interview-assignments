@@ -4,14 +4,14 @@
 
 class WordManager
 {
-	MemoryManager m_mManager;
-	
-	public:
-	WordManager();
-	~WordManager();
-	RetVal insertWord(char *word);
-	RetVal deleteWord(char *word);
-	RetVal searchWord(char *word);
+    MemoryManager m_mManager;
+    
+    public:
+    WordManager();
+    ~WordManager();
+    RetVal insertWord(char *word);
+    RetVal deleteWord(char *word);
+    RetVal searchWord(char *word);
 };
 
 
