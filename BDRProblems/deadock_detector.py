@@ -3,54 +3,18 @@ from collections import defaultdict
 # For each strongly connected component, find all elementary
 # cycles. 
 def simple_cycles(G, sccs):
-    def _unblock(thisnode, blocked, B):
-        stack = set([thisnode])
-        while stack:
-            node = stack.pop()
-            if node in blocked:
-                blocked.remove(node)
-                stack.update(B[node])
-                B[node].clear()
     G = {v: set(nbrs) for (v,nbrs) in G.items()} # make a copy of the graph
     while sccs:
         scc = sccs.pop()
         startnode = scc.pop()
-        path=[startnode]
-        blocked = set()
-        closed = set()
-        blocked.add(startnode)
-        B = defaultdict(set)
-        stack = []
-        if startnode in G:
-            stack = [ (startnode,list(G[startnode])) ]
-        while stack:
-            thisnode, nbrs = stack[-1]
-            if nbrs:
-                nextnode = nbrs.pop()
-                if nextnode == startnode:
-                    yield path[:]
-                    closed.update(path)
-                elif nextnode not in blocked:
-                    ll = list(G[nextnode]) if nextnode in G else []
-                    path.append(nextnode)
-                    stack.append( (nextnode,ll) )
-                    closed.discard(nextnode)
-                    blocked.add(nextnode)
-                    continue
-            if not nbrs:
-                if thisnode in closed:
-                    _unblock(thisnode,blocked,B)
-                else:
-                    if (thisnode in G):
-                        for nbr in G[thisnode]:
-                            if thisnode not in B[nbr]:
-                                B[nbr].add(thisnode)
-                stack.pop()
-                path.pop()
         if (startnode in G):
             remove_node(G, startnode)
         H = subgraph(G, set(scc))
-        sccs.extend(strongly_connected_components(H))
+        scc_temp = strongly_connected_components(H)
+        if (len(scc_temp) == 0):
+            print("query to kill: {}".format(startnode))
+            return
+        sccs.extend(scc_temp)
 
 # Returns all strongly connected components in a graph
 # This would allow isolating a set of queries that are
@@ -91,7 +55,8 @@ def strongly_connected_components(graph):
                 successor = stack.pop()
                 connected_component.append(successor)
                 if successor == node: break
-            result.append(connected_component[:])
+            if (len(connected_component) > 1):
+                result.append(connected_component[:])
     
     for node in graph:
         if node not in index:
@@ -134,12 +99,6 @@ for node, objs in dict.items():
         graph[qids[0]] = qids[1:]
 sccs = strongly_connected_components(graph)
 for scc in sccs:
-    t = list(simple_cycles(graph, [scc]))
-    flat_list = [item for sublist in t for item in sublist]
-    if (len(flat_list)):
-        query_to_kill = most_common = max(flat_list, key = flat_list.count)
-        print("query to kill: {}".format(query_to_kill))
-    else:
-        print("No deadlocks detected")
+    simple_cycles(graph, [scc])
 
 
