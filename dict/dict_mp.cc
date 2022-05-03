@@ -55,7 +55,7 @@ typedef struct WordList WordList;
 #define SHM_KEY_ID 0x23456
 #define SEM_KEY_ID 0x24567
 
-#define WORDNULL (MAX_WORDLEN + 1)       // NULL value
+#define WORDNULL  -1 // (MAX_WORDLEN + 1)       // NULL value
 
 // structure to store a word and its metadata
 struct WordNode {
@@ -374,14 +374,14 @@ int main(int argc, char** argv)
 
     while ( temp-- > 0 ) {
         pt = wordnode(curr_idx);
-        if (!pt->isdeleted)
+        if (pt && !pt->isdeleted)
             puts(wordnode(curr_idx)->word);
         tempval=wordnode_pop(&curr_idx);
         curr_idx=tempval;
     }
     
     cout <<"\n happy world \n";
-    cin >> action;
+//    cin >> action;
     
     shmdt(pWordList);
 
