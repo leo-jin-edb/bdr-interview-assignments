@@ -25,13 +25,14 @@
 typedef struct SetNode
 {
   char key[32]; // this is our key
-  // Imagine the rest of the implementation
+  // Rest of the implementation goes here
 } SetNode;
 
 // Definition for the Set object
 typedef struct Set
 {
-  SetNode *buckets;
+  // SetNode will be used in here
+  // Implementation goes here
 } Set;
 
 /* This will insert a string in the set. Will be a no-op
@@ -117,7 +118,7 @@ int main(int argc, char *argv[])
 
   action = parseAction(argv[1]);
 
-  if (action != INIT || action != END)
+  if (action != INIT && action != END)
   {
     if (argc < 3)
     {
@@ -252,6 +253,9 @@ int main(int argc, char *argv[])
     perror("Invalid action\n");
     return -1;
   }
+
+  // We don't need to munmap() or sem_close() since
+  // it should automatically be done whenever process ends
 
   return 0;
 }
