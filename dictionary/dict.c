@@ -8,6 +8,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <semaphore.h>
+#ifdef LINUX
+#include <stdint.h>
+#endif
 
 #define BUF_SIZE 4096
 
@@ -181,8 +184,6 @@ int main(int argc, char *argv[])
         else if (rtc == 1)
             printf("word %s was found\n",word);
     }
-
-   
     
 done:
     if (semfd && semfd != SEM_FAILED)
