@@ -74,7 +74,7 @@ typedef struct tnode
 {
     bool is_word;
     bool isddeleted;
-    char* ch[MAX_UNIQUE_LITERAL];
+    size_t ch[MAX_UNIQUE_LITERAL];
 } tnode;
 
 // memory pool to store words 
@@ -181,6 +181,7 @@ tnode* getnewnode()
 int tnode_insertword(tnode *root, const char* word)
 {
     const char* ch = word;
+	tnode *ptr;
     // allocate tree node point and let root node point to it 
 
     if (root == NULL)
@@ -192,9 +193,11 @@ int tnode_insertword(tnode *root, const char* word)
     {
         if (pt->ch[*ch - 'a'] == NULL)
         {
-            pt->ch[*ch - 'a'] = (char *) getnewnode();
+			ptr = (tnode *) getnewnode();
+			
+            pt->ch[*ch - 'a'] = ptr - root /*(char *) getnewnode()*/ ;
         }
-        pt = (tnode *)pt->ch[*ch - 'a'];
+        pt = root + /*(tnode *)*/ pt->ch[*ch - 'a'];
         ch++;
     }
 
@@ -213,7 +216,7 @@ bool tnode_searchword(tnode *root, const char* word)
         {
             return false;
         }
-        pt = (tnode *)pt->ch[*ch - 'a'];
+        pt =  root + /*(tnode *)*/ pt->ch[*ch - 'a'];
         ch++;
     }
 
