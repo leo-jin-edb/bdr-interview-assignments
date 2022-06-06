@@ -37,16 +37,12 @@ Document the APIs (no implementation required) as comments.
 #include <stdio.h>
 #include <string.h>
 
-#undef MUKESH
-#define MUKESH 1
-#ifdef MUKESH
-
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/shm.h>
 #include <sys/sem.h>
-#endif
+
 
 #include <iostream>
 #include <string>
@@ -118,43 +114,14 @@ typedef enum op
 
 
 
-/* allocates memory to store a trie node from memory pool */
-/* tnode_alloc -
- * checks if freelist is pointing to some offset if it is not pointing then we can directly get
- * first node.
- * otherwise
- * return the node which will point to pool + node
- */
-
+/* tnode_alloc - allocates memory to store a trie node from memory pool */
 void* tnode_alloc(int size)
 {
 
-/*    if (pWordList->pfree != WORDNULL) {
-        tnode* node = pWordList->pool + pWordList->pfree;
-
-        pWordList->pfree += 1 ;
-		pWordList->npool++;
-        return node;
-    }
-    else {
-		*/
         if (pWordList->npool < MAX_TNODE)
 		{
-		//pWordList->npool++;
-		return &pWordList->pool[pWordList->npool++];
+			return &pWordList->pool[pWordList->npool++];
 		}
-    //}
-	
-	/*
-	if (memory_allocated < MAX_TNODE)
-	{
-		return pshm_buf->tnode_pool + (memory_allocated++ * sizeof(tnode))
-	}		
-	else
-	{
-		return NULL;
-	}
-	*/
     return NULL;
 
 };
@@ -201,6 +168,10 @@ int tnode_insertword(tnode *root, const char* word)
         ch++;
     }
 
+	if (pt->is_word)
+	{
+		return 1;  // return 1 for duplicate word.
+	}
     pt->is_word = true;
 
     return 0;
@@ -240,7 +211,7 @@ tnode* tnode_searchword_del_helper(tnode *root, const char* word, USHORT* wordco
             *wordcount = prefixword_length;
         }
 
-        pt = (tnode*)pt->ch[*ch - 'a'];
+        pt =  root  + /*(tnode*)*/ pt->ch[*ch - 'a'];
         ch++;
     }
     return pt->is_word ? pt : NULL;
@@ -335,8 +306,6 @@ int selectoption(int argc, char** argv)
         return 0;
 }
 
-#ifdef MUKESH
-
 
 /* initializes the semaphore using the SETVAL command in a semctl call. */
 
@@ -389,11 +358,10 @@ static int semaphore_v(void)
     }
     return(1);
 }
-#endif
+
 /* options to this program is called with */
 int shared_memory_op(int action, const char* str)
 {
-#ifdef MUKESH
     struct sembuf sem_buf;
     //struct semid_ds buf;
 
@@ -409,22 +377,29 @@ int shared_memory_op(int action, const char* str)
             return 0;
         }
     }
-#endif
+
     switch (action)
     {
     case INSERT_WORD:  /* insert a word in shared memory */
-#ifdef MUKESH
+
         if (!semaphore_p())
             exit(EXIT_FAILURE);
-#endif
-        if (tnode_searchword(&pWordList->pool[0], str))
+      /*  if (tnode_searchword(&pWordList->pool[0], str))
             cout << "Duplicate word: " << str << " : not inserting it." << endl;
-        else
-            tnode_insertword(&pWordList->pool[0], str);
-#ifdef MUKESH
+        else*/
+            if (tnode_insertword(&pWordList->pool[0], str) == 1)
+			{
+				cout << "Duplicate word: " << str << " : Already exists." << endl;
+			}
+			else
+			{
+				cout << "Inserted word: " << str << endl;
+			}
+				
+
         if (!semaphore_v())
             exit(EXIT_FAILURE);
-#endif
+
         break;
     case SEARCH_WORD:  /* search for a word */
         if (tnode_searchword(&pWordList->pool[0], str))
@@ -439,17 +414,19 @@ int shared_memory_op(int action, const char* str)
         tnode* pt;
         size_t tempval = 0;
         int found = 0;
-#ifdef MUKESH
+
         if (!semaphore_p())
             exit(EXIT_FAILURE);
-		if (tnode_deleteword(&pWordList->pool[0], str) == 0)
-			found = 0;
+		if (tnode_deleteword(&pWordList->pool[0], str) == true)
+			found =1;
 
         if (!semaphore_v())
            exit(EXIT_FAILURE);
-#endif
+
         if (!found)
             cout << "not found word, deletion not done :  " << str << endl;
+		else
+			cout << "Deleted word :  " << str << endl;
     }
     break;
     default: /* not a valid option */
@@ -458,7 +435,7 @@ int shared_memory_op(int action, const char* str)
     return 0;
 }
 
-#ifdef MUKESH
+
 int main(int argc, char** argv)
 {
     int shmid;
@@ -532,5 +509,5 @@ int main(int argc, char** argv)
     return 0;
 }
 
-#endif
+
 
