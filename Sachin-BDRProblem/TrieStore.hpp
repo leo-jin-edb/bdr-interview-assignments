@@ -20,6 +20,8 @@ class TrieStore {
 
 public:
 
+	TrieStore(DicConfig& config);
+
 	DicStatus InsertWord(const string word, const string definition, TrieStoreHead * tsHead);
 	DicStatus DeleteWord(const string word, TrieStoreHead* tsHead);
 	DicStatus SearchWord(const string word, string & definition);
@@ -27,7 +29,7 @@ public:
 
 private:
 
-		SyncFlag	syncSelf; // TODO: check if only one sync flags is enough or should we have one for accessing each child?
+		interprocess_mutex 	mutex;
 
 		TrieStore * nextTS[MAX_NEXT_TSNODES]; // 26*4 = 104 bytes
 

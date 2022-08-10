@@ -1,6 +1,11 @@
-
 #include "Dictionary.hpp"
 
+DicStatus Dictionary::Dictionary() {
+
+    if (config.shName[0] == '\0' || appdata == nullptr || appDataSize == 0)
+        exit(EXIT_FAILURE);
+
+}
 
 int main () {
 

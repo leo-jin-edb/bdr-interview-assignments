@@ -26,12 +26,15 @@ typedef unsigned char       UInt8;
 typedef char                Int8 ;
 typedef unsigned char *     BPtr;
 
-#define	MEM_NUM_BUCKETS						16 
-#define MEM_MINIMUM_BUCKET_SIZE				32
-#define MEM_MAX_BUCKET_SIZE					65536 // overkill for now. We will hardly need such a high bucket size for storing free memory chunks.
-
+// TODO: we are initializing SHM with 0.25 GB in one shot. TODO: All SHM memory is allocated in beginning. 
+// Improve: initialize SHM with less memory first & then expand SHM as and when required.
+#define DEFAULT_SHM_SIZE					2^28 
 #define SHM_NAME_SIZE						32
-#define WORD_DEF_MAX_SZIE					256	 // this is to avoid fragmentation of memory in case of word alter or word delete & then create again.
+
+// TODO: this is to avoid fragmentation of memory in case of word alter or word delete & then create again.
+// Improve: Use whatever memory required for word & handle defragmentation of memory whenever alter is called with extra space than earlier.
+
+#define WORD_DEF_MAX_SZIE					200	 
 
 struct DicConfig {
 
@@ -45,13 +48,11 @@ enum DicStatus {
 	DIC_SUCCESS = 0,
 	DIC_ERROR,
 
-	// Sync/Atomics errors.
-	SYNC_OTHERS_HAVE_EXCL_ACCESS = 100,
-	SYNC_OTHERS_HAVE_SHARED_ACCESS,
+	// boost library errors related to interprocess mutex or shared memory.
+	BOOST_LIB_ERR = 100,
 
 	// Memory Errors.
 	MEM_UNAVAILABLE = 200,
-	MEM_BOOST_ERR,
 	MEM_INIT_ERROR,
 	MEM_UNKNOWN_ERR,
 
