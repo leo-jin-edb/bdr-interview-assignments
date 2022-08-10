@@ -114,7 +114,7 @@ DicStatus TrieStore::SearchWord(UInt32 i, const string word, string & definition
 
 			// reached destination TS node.
 			if (wordPtr != nullptr)
-				memcpy(&definition, wordPtr, defLen);
+				definition = string(wordPtr, wordPtr + defLen);
 			else
 				rc = TST_WORD_DOESNOT_EXIST;
 		}
