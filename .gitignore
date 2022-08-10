@@ -1,2 +1,8 @@
 .vs
+.vscode
+*/.vscode/*
 */.vs/*
+*.o
+*/Dictionary
+*.swp
+

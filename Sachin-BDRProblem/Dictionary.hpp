@@ -6,7 +6,7 @@ class Dictionary {
 
     public:
 
-        Dictionary(DicConfig& config);
+        Dictionary(DicConfig & config);
 
         DicStatus InsertWord(const string word, const string definition);
         DicStatus DeleteWord(const string word);
@@ -14,4 +14,5 @@ class Dictionary {
 
     private:
 
+        TrieStoreMgr* tsMgr;
 };

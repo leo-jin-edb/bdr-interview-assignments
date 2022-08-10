@@ -1,155 +1,192 @@
 
 #include "TrieStore.hpp"
 
-DicStatus 
-TrieStore::InsertWord(const string word, const string definition, TrieStoreHead* tsHead) {
+TrieStore::TrieStore() {
 
-	// All inputs are valid.
+	memset(nextTS, 0, sizeof(TrieStore*) * MAX_NEXT_TSNODES);
+	wordPtr = nullptr;
+}
 
-	DicStatus ret = DIC_SUCCESS;
+DicStatus TrieStore::InsertWord(UInt32 i, const string word, const string definition) {
 
-	while (syncSelf.AccessExclusive() == false); // TODO: We could add Timed Wait here & some retries instead of indefinite loop.
+	// TODO: There is a possible partial write issue here if write partial data & process crashes abruptly. Not handled as of now.
 
-	if (word.empty()) {
-		// reached leaf TS node.
+	DicStatus rc = DIC_SUCCESS;
+	TrieStore* nextPtr = nullptr;
 
-		if (selfWordPtr == nullptr) {
+	{
+		scoped_lock<interprocess_mutex> lock(mutex);
 
-			selfDefLen = sizeof(definition);
+		if (i == word.size() - 1) {
 
-			ret = tsHead->AllocMemBlock((BPtr &)selfWordPtr, selfDefLen); 
+			// reached destination TS node.
+			if (wordPtr == nullptr) {
 
-			if (!ret)
-				memcpy(selfWordPtr, definition.c_str(), selfDefLen);
+				defLen = definition.size();
+
+				wordPtr = MemoryMgr::AllocMem(defLen);
+
+				if (wordPtr) {
+
+					memcpy(wordPtr, definition.c_str(), defLen);
+				}
+			}
+			else {
+
+				rc = TST_WORD_ALREADY_EXISTS;
+			}
+				
 		}
-		else
-			ret = TST_WORD_ALREADY_EXISTS;
-	}
-	else {
+		else {
+			char ch = word[i + 1];
+			BPtr ptr = nullptr;
 
-		// We need to drill down further
+			if (!nextTS[IndexOf(ch)]) {
+
+				ptr = MemoryMgr::AllocMem(sizeof(TrieStore));
+
+				if (ptr) {
+
+					nextTS[IndexOf(ch)] = new (ptr) TrieStore;
+				}
+			}
+
+			// if mem allocation have failed, nextPtr would be still null
+			nextPtr = (TrieStore *)nextTS[IndexOf(ch)];
+		}
+	} // lock released.
+
+	// if next pointer exist
+	if (nextPtr) {
+		rc = nextPtr->InsertWord(i + 1, word, definition);
+	}
+
+	return rc;
+}
+
+DicStatus TrieStore::DeleteWord(UInt32 i, const string word) {
+
+	DicStatus rc = DIC_SUCCESS;
+	TrieStore* nextPtr = nullptr;
+
+	{
+		scoped_lock<interprocess_mutex> lock(mutex);
+
+		if (i == word.size() - 1) {
+
+			// reached destination TS node.
+			if (wordPtr != nullptr) {
+
+				wordPtr = nullptr;
+
+				// TODO: memory leakage here is not handled as MemMgr do now support defragmented memory currently. 
+				// This can be improved by adding free chunks management using buckets of size 32/64/128/256/512/etc. 12 to 16 such buckets(of lists of chunks) should suffice.
+			}
+			else
+				rc = TST_WORD_DOESNOT_EXIST;
+		}
+		else {
+			char ch = word[i + 1];
+			nextPtr = (TrieStore*)nextTS[IndexOf(ch)];
+
+			if (nextPtr == nullptr)
+				rc = TST_WORD_DOESNOT_EXIST;
+		}
+	} // lock released.
+
+	// if next pointer exist
+	if (nextPtr) {
+		rc = nextPtr->DeleteWord(i + 1, word);
+	}
+
+	return rc;
+}
+
+DicStatus TrieStore::SearchWord(UInt32 i, const string word, string & definition) {
+
+	DicStatus rc		= DIC_SUCCESS;
+	TrieStore* nextPtr	= nullptr;
+
+	{
+		scoped_lock<interprocess_mutex> lock(mutex);
+
+		if (i == word.size() - 1) {
+
+			// reached destination TS node.
+			if (wordPtr != nullptr)
+				memcpy(&definition, wordPtr, defLen);
+			else
+				rc = TST_WORD_DOESNOT_EXIST;
+		}
+		else {
+			char ch = word[i + 1];
+			nextPtr = (TrieStore*)nextTS[IndexOf(ch)];
+
+			if (nextPtr == nullptr)
+				rc = TST_WORD_DOESNOT_EXIST;
+		}
+	} // lock released.
+
+	// if we valid next pointer exist
+	if (nextPtr) { 
+		rc = nextPtr->SearchWord(i+1, word, definition);
+	}
 		
-		char ch = word[0];
-		TrieStore* & next = nextTS[IndexOf(ch)];
-
-		if (next == nullptr) {
-			// create new TrieNode & update the respective chil pointer.
-			// Below func resets the pointer before inside before returning. So we don't need to reset again.
-			ret = tsHead->AllocMemBlock((BPtr&)next, sizeof(TrieStore));
-		}
-		syncSelf.ReleaseExclusive();
-
-		if (!ret) {
-			ret = next->InsertWord(string(word.begin() + 1, word.end()), definition, tsHead); // trim down first char in 'word' & send rest
-		}
-
-		return ret;
-	}
-
-	syncSelf.ReleaseExclusive();
-	return ret;
+	return rc;
 }
 
-DicStatus 
-TrieStore::DeleteWord(const string word, TrieStoreHead* tsHead) {
 
-	// All inputs are valid.
+///////////// TrieStoreMgr APIs ////////////////////////
 
-	DicStatus ret = DIC_SUCCESS;
+TrieStoreMgr::TrieStoreMgr(DicConfig& config) {
 
-	while (syncSelf.AccessExclusive() == false); // TODO: We could add Timed Wait here & some retries instead of indefinite loop.
+	DicStatus rc = MemoryMgr::Initialize(config);
 
-	if (word.empty()) {
-		// reached leaf TS node.
+	if (rc) {
 
-		if (selfWordPtr != nullptr) {
+		BPtr mptr = MemoryMgr::AllocMem(sizeof(interprocess_mutex));
 
-			ret = tsHead->DeAllocMemBlock((BPtr&)selfWordPtr, selfDefLen);
-
-			if (!ret)
-				selfWordPtr = nullptr;
-		}
+		if (config.shCreate)
+			mutex = new (mptr) interprocess_mutex;
 		else
-			ret = TST_WORD_DOESNOT_EXIST;
-	}
-	else {
+			mutex = (interprocess_mutex*)mptr;
 
-		// We need to drill down further
+		scoped_lock<interprocess_mutex> lock(*mutex);
 
-		char ch = word[0];
-		TrieStore*& next = nextTS[IndexOf(ch)];
+		for (int i = 0; i < MAX_NEXT_TSNODES; i++) {
 
-		if (next == nullptr) {
-			ret = TST_WORD_DOESNOT_EXIST;
+			TrieStore* ptr = (TrieStore*)MemoryMgr::AllocMem(sizeof(TrieStore));
+
+			if (config.shCreate) {
+
+				tsHead[i] = new (ptr) TrieStore;
+			}
+			else
+				tsHead[i] = ptr;
 		}
-		syncSelf.ReleaseExclusive();
-
-		if (!ret) {
-			ret = next->DeleteWord(string(word.begin() + 1, word.end()), tsHead); // trim down first char in 'word' & send rest
-		}
-
-		return ret;
 	}
-
-	syncSelf.ReleaseExclusive();
-	return ret;
+	else
+		exit(EXIT_FAILURE);
 }
 
-DicStatus TrieStore::SearchWord(const string word, string & definition) {
+DicStatus
+TrieStoreMgr::InsertWord(const string word, const string definition) {
 
-	DicStatus ret = DIC_SUCCESS;
+	char ch = word[0];
+	return tsHead[IndexOf(ch)]->InsertWord(0, word, definition);
+}
 
-	while (syncSelf.AccessShared() == false); // TODO: We could add Timed Wait here & some retries instead of indefinite loop.
+DicStatus
+TrieStoreMgr::DeleteWord(const string word) {
 
-	if (word.empty()) {
-		// reached leaf TS node.
+	char ch = word[0];
+	return tsHead[IndexOf(ch)]->DeleteWord(0, word);
+}
 
-		if (selfWordPtr != nullptr) {
+DicStatus TrieStoreMgr::SearchWord(const string word, string & definition) {
 
-			memcpy((void *)definition.c_str(), selfWordPtr, selfDefLen);
-		}
-		else
-			ret = TST_WORD_DOESNOT_EXIST;
-	}
-	else {
-
-		// We need to drill down further
-
-		char ch = word[0];
-		TrieStore*& next = nextTS[IndexOf(ch)];
-
-		if (next == nullptr) {
-			ret = TST_WORD_DOESNOT_EXIST;
-		}
-		syncSelf.ReleaseShared();
-
-		if (!ret) {
-			ret = next->SearchWord(string(word.begin() + 1, word.end()), definition); // trim down first char in 'word' & send rest
-		}
-
-		return ret;
-	}
-
-	syncSelf.ReleaseShared();
-	return ret;
+	char ch = word[0];
+	return tsHead[IndexOf(ch)]->SearchWord(0, word, definition);
 }
 
 
-DicStatus 
-TrieStoreHead::AllocMemBlock(BPtr& ptr, UInt32 size) {
-
-	/*
-	* 1) TODO: If memory goes below some threshold say '256' bytes, get new memblock from SHM for this store. 
-		Caller will remain under Excl lock till then.
-	  2) Reset the memory before returning.
-	*/
-
-	return DIC_SUCCESS;
-}
-
-// DeAlloc simply calls MemMgr DeAllocData & doesn't manage fragmented mem blocks.
-DicStatus 
-TrieStoreHead::DeAllocMemBlock(BPtr& ptr, UInt32 size) {
-
-	return DIC_SUCCESS;
-}

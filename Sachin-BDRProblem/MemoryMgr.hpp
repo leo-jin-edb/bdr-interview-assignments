@@ -5,9 +5,8 @@
 struct MemMgrMetaData {
 
 	interprocess_mutex 	mutex;						// from boost library.
-	char				shName[SHM_NAME_SIZE];
+	Int8				shName[SHM_NAME_SIZE];
 	UInt32				shmSize;
-	UInt32				appDataSize;
 	UInt32				freeOffset;					// start of free memory.
 };
 
@@ -19,12 +18,10 @@ public:
 	static DicStatus	InternalGetSharedMemory(DicConfig config);
 
 	// APIs
-	static DicStatus	Initialize(DicConfig& config, const BPtr appdata, UInt32 appDataSize);
-	static DicStatus	DeInitialize(bool Create, const string shareMemName, const BPtr appdata, UInt32 appDataSize);
+	static DicStatus	Initialize(DicConfig& config);
+	static DicStatus	DeInitialize();
 
-	static DicStatus	GetAppData(BPtr& appData, UInt32& appDataSize);
-
-	static DicStatus	AllocMem(BPtr& ptr, UInt32 size);
+	static BPtr			AllocMem(UInt32 size);
 
 private:
 

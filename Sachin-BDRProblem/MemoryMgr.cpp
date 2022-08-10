@@ -1,50 +1,44 @@
 #include "MemoryMgr.hpp"
 
-MemMgrMetaData	MemoryMgr::metaData		= nullptr;
-BPtr			MemoryMgr::shmPtr		= nullptr;
-bool			MemoryMgr::initialized	= false;
+MemMgrMetaData *	MemoryMgr::metaData		= nullptr;
+BPtr				MemoryMgr::shmPtr		= nullptr;
+bool				MemoryMgr::initialized	= false;
 
 DicStatus MemoryMgr::InternalGetSharedMemory(DicConfig config) {
 
 	DicStatus rc = DIC_SUCCESS;
 
-	BOOST_TRY{
+	shared_memory_object * shm;
 
-		shared_memory_object * shm;
+	if (config.shCreate) {
 
-		if (config.shCreate) {
+		// remove old SHM with same name.
+		shared_memory_object::remove(config.shName);
 
-			// remove old SHM with same name.
-			shared_memory_object::remove(config.shName);
-
-			cout << "Creating Shared Memory" << endl;
-			shm = new shared_memory_object(create_only, config.shName, read_write);
-			shm->truncate(config.shSize); //Set size
-		}
-		else {
-
-			cout << "Opening Shared Memory" << endl;
-			shm = new shared_memory_object(open_only, config.shName, read_write);
-		}
-
-		//Map the whole shared memory in this process
-		mapped_region region(*shm , read_write);
-
-		shmPtr = (BPtr)region.get_address();
-
-		cout << "Shared Memory address : " << shptr << endl;
+		cout << "Creating Shared Memory" << endl;
+		shm = new shared_memory_object(create_only, config.shName, read_write);
+		shm->truncate(config.shSize); //Set size
 	}
-	BOOST_CATCH(interprocess_exception& ex) {
+	else {
 
-		cout << "Execption: " << ex.what() << endl;
-		rc = BOOST_LIB_ERR;
+		cout << "Opening Shared Memory" << endl;
+		shm = new shared_memory_object(open_only, config.shName, read_write);
+	}
 
-	} BOOST_CATCH_END
+	//Map the whole shared memory in this process
+	mapped_region region(*shm , read_write);
+
+	shmPtr = (BPtr)region.get_address();
+	if (shmPtr == nullptr)
+		return MEM_INIT_ERROR;
+
+	cout << "Shared Memory address : " << shmPtr << endl;
+	
 
 	return rc;
 }
 
-DicStatus MemoryMgr::Initialize(DicConfig & config, const BPtr appdata, UInt32 appDataSize) {
+DicStatus MemoryMgr::Initialize(DicConfig & config) {
 
 	// Ip params are already validated.
 
@@ -70,12 +64,7 @@ DicStatus MemoryMgr::Initialize(DicConfig & config, const BPtr appdata, UInt32 a
 			metaData->shmSize		= config.shSize;
 			memcpy(metaData->shName, config.shName, SHM_NAME_SIZE);
 
-			metaData->appDataSize	= appDataSize;
 			metaData->freeOffset	= sizeof(MemMgrMetaData);
-
-			// write app data.
-			memcpy(shmPtr + metaData->freeOffset, appdata, appDataSize);
-			metaData->freeOffset += appDataSize;
 		
 			initialized = true;
 		}
@@ -98,56 +87,35 @@ DicStatus MemoryMgr::Initialize(DicConfig & config, const BPtr appdata, UInt32 a
 	return rc;
 }
 
-DicStatus	MemoryMgr::DeInitialize(bool Create, const string shareMemName, const BPtr appdata, UInt32 appDataSize) {
+DicStatus	MemoryMgr::DeInitialize() {
 
 	if (!initialized)
 		return MEM_INIT_ERROR;
 
 	DicStatus rc = DIC_SUCCESS;
-
-	BOOST_TRY {
-
-		// TODO: Handle more scenarios of existing gracefully.
-		scoped_lock<interprocess_mutex> lock(metaData->mutex);
-
-		shared_memory_object::remove(config.shName);
-	}
-	BOOST_CATCH(interprocess_exception& ex) {
-
-		cout << "Execption: " << ex.what() << endl;
-		rc = BOOST_LIB_ERR;
-
-	} BOOST_CATCH_END
-		
-	return rc;
-}
 	
-DicStatus	MemoryMgr::GetAppData(BPtr & appData, UInt32 & appDataSize) {
-
-	if (!initialized)
-		return MEM_INIT_ERROR;
-
+	// TODO: what is someone is using SHM currently? Handle graceful shutdown.
 	scoped_lock<interprocess_mutex> lock(metaData->mutex);
 
-	appDataSize = metaData->appDataSize;
-	memcpy(appData, shmPtr + sizeof(MemMgrMetaData), appDataSize);	
-
-	return DIC_SUCCESS;
-}
+	shared_memory_object::remove(metaData->shName);
 	
-DicStatus MemoryMgr::AllocMem(BPtr & ptr, UInt32 size) {
+		
+	return rc;
+}	
+	
+BPtr MemoryMgr::AllocMem(UInt32 size) {
 
 	if (!initialized)
-		return MEM_INIT_ERROR;
+		return nullptr;
 
 	scoped_lock<interprocess_mutex> lock(metaData->mutex);
 
 	if ((metaData->freeOffset + size) >= metaData->shmSize)
-		return MEM_UNAVAILABLE;
+		return nullptr;
 
-	ptr = shmPtr + metaData->freeOffset;
+	BPtr ptr = shmPtr + metaData->freeOffset;
 	metaData->freeOffset += size;
 
-	return DIC_SUCCESS;
+	return ptr;
 }
 

@@ -25,44 +25,35 @@ typedef short               Int16 ;
 typedef unsigned char       UInt8;
 typedef char                Int8 ;
 typedef unsigned char *     BPtr;
+typedef void *				VPtr;
 
-// TODO: we are initializing SHM with 0.25 GB in one shot. TODO: All SHM memory is allocated in beginning. 
+// TODO: we are initializing SHM with 128 MB in one shot. TODO: All SHM memory is allocated in beginning. 
 // Improve: initialize SHM with less memory first & then expand SHM as and when required.
-#define DEFAULT_SHM_SIZE					2^28 
+#define DEFAULT_SHM_SIZE					2^27 
 #define SHM_NAME_SIZE						32
-
-// TODO: this is to avoid fragmentation of memory in case of word alter or word delete & then create again.
-// Improve: Use whatever memory required for word & handle defragmentation of memory whenever alter is called with extra space than earlier.
-
-#define WORD_DEF_MAX_SZIE					200	 
 
 struct DicConfig {
 
 	bool			shCreate;	// true: create SHM, false: open SHM
-	char			shName[SHM_NAME_SIZE];
-	unsigned int	shSize; 
+	Int8			shName[SHM_NAME_SIZE];
+	UInt32			shSize; 
 };
 
 enum DicStatus {
 
 	DIC_SUCCESS = 0,
-	DIC_ERROR,
 
-	// boost library errors related to interprocess mutex or shared memory.
-	BOOST_LIB_ERR = 100,
+	// Dict layer errors
+	DIC_INVALID_IP_PARAM,
+
+	// Trie Store Errors
+	TST_WORD_ALREADY_EXISTS = 100,
+	TST_WORD_DOESNOT_EXIST,
 
 	// Memory Errors.
 	MEM_UNAVAILABLE = 200,
 	MEM_INIT_ERROR,
-	MEM_UNKNOWN_ERR,
 
-	// Trie Store Errors
-	TST_WORD_ALREADY_EXISTS = 300,
-	TST_WORD_DOESNOT_EXIST,
-	TST_MEMORY_FULL,
-	TST_UNKNOWN_ERR,
-
-	// Dic App Errors
-	DIC_INVALID_IP_PARAM = 400,
-	DIC_UNKNOWN_ERR,
+	// boost library errors related to interprocess mutex or shared memory.
+	BOOST_LIB_ERR = 300,
 };
