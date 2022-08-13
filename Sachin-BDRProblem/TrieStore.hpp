@@ -58,9 +58,9 @@ public:
 
 	TrieStoreMgr(DicConfig & config);
 
-	DicStatus InsertWord(const string word, const string definition);
-	DicStatus DeleteWord(const string word);
-	DicStatus SearchWord(const string word, string & definition);
+	DicStatus InsertWord(string word, const string definition);
+	DicStatus DeleteWord(string word);
+	DicStatus SearchWord(string word, string & definition);
 
 private:
 

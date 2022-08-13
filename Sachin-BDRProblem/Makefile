@@ -4,8 +4,11 @@ LDFLAGS = -lrt -lpthread -lboost_system -std=c++11
 
 all: Dictionary
 
-Dictionary: Dictionary.o TrieStore.o MemoryMgr.o
-	$(CC) $(LDFLAGS) Dictionary.o TrieStore.o MemoryMgr.o -o Dictionary
+Dictionary: main.o Dictionary.o TrieStore.o MemoryMgr.o
+	$(CC) $(LDFLAGS) main.o Dictionary.o TrieStore.o MemoryMgr.o -o Dictionary
+
+main.o: main.cpp
+	$(CC) $(CFLAGS) main.cpp $(LDFLAGS)
 
 Dictionary.o: Dictionary.cpp
 	$(CC) $(CFLAGS) Dictionary.cpp $(LDFLAGS)

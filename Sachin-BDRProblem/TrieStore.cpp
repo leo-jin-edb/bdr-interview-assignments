@@ -172,20 +172,26 @@ TrieStoreMgr::TrieStoreMgr(DicConfig & config) {
 }
 
 DicStatus
-TrieStoreMgr::InsertWord(const string word, const string definition) {
+TrieStoreMgr::InsertWord(string word, const string definition) {
+
+	transform(word.begin(), word.end(), word.begin(), ::tolower);
 
 	char ch = word[0];
 	return tsHead[IndexOf(ch)]->InsertWord(0, word, definition);
 }
 
 DicStatus
-TrieStoreMgr::DeleteWord(const string word) {
+TrieStoreMgr::DeleteWord(string word) {
+
+	transform(word.begin(), word.end(), word.begin(), ::tolower);
 
 	char ch = word[0];
 	return tsHead[IndexOf(ch)]->DeleteWord(0, word);
 }
 
-DicStatus TrieStoreMgr::SearchWord(const string word, string & definition) {
+DicStatus TrieStoreMgr::SearchWord(string word, string & definition) {
+
+	transform(word.begin(), word.end(), word.begin(), ::tolower);
 
 	char ch = word[0];
 	return tsHead[IndexOf(ch)]->SearchWord(0, word, definition);
