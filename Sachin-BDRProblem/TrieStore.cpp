@@ -1,10 +1,12 @@
 
 #include "TrieStore.hpp"
 
-TrieStore::TrieStore() {
+TrieStore::TrieStore(TrieStore *p, char c) {
 
 	memset(nextTS, 0, sizeof(TrieStore*) * MAX_NEXT_TSNODES);
 	wordPtr = nullptr;
+	parent = p;
+	ch = c;
 }
 
 DicStatus TrieStore::InsertWord(UInt32 i, const string word, const string definition) {
@@ -24,7 +26,7 @@ DicStatus TrieStore::InsertWord(UInt32 i, const string word, const string defini
 
 				defLen = definition.size();
 
-				wordPtr = MemoryMgr::AllocMem(defLen);
+				wordPtr = MemoryMgr::Obj()->AllocMem(defLen);
 
 				if (wordPtr) {
 
@@ -43,11 +45,11 @@ DicStatus TrieStore::InsertWord(UInt32 i, const string word, const string defini
 
 			if (!nextTS[IndexOf(ch)]) {
 
-				ptr = MemoryMgr::AllocMem(sizeof(TrieStore));
+				ptr = MemoryMgr::Obj()->AllocMem(sizeof(TrieStore));
 
 				if (ptr) {
 
-					nextTS[IndexOf(ch)] = new (ptr) TrieStore;
+					nextTS[IndexOf(ch)] = new (ptr) TrieStore(this, ch);
 				}
 			}
 
@@ -138,13 +140,13 @@ DicStatus TrieStore::SearchWord(UInt32 i, const string word, string & definition
 
 ///////////// TrieStoreMgr APIs ////////////////////////
 
-TrieStoreMgr::TrieStoreMgr(DicConfig& config) {
+TrieStoreMgr::TrieStoreMgr(DicConfig & config) {
 
-	DicStatus rc = MemoryMgr::Initialize(config);
+	MemoryMgr * memMgr = MemoryMgr::Obj(&config);
 
-	if (rc) {
+	if (memMgr) {
 
-		BPtr mptr = MemoryMgr::AllocMem(sizeof(interprocess_mutex));
+		BPtr mptr = memMgr->AllocMem(sizeof(interprocess_mutex));
 
 		if (config.shCreate)
 			mutex = new (mptr) interprocess_mutex;
@@ -155,11 +157,11 @@ TrieStoreMgr::TrieStoreMgr(DicConfig& config) {
 
 		for (int i = 0; i < MAX_NEXT_TSNODES; i++) {
 
-			TrieStore* ptr = (TrieStore*)MemoryMgr::AllocMem(sizeof(TrieStore));
+			TrieStore* ptr = (TrieStore*)memMgr->AllocMem(sizeof(TrieStore));
 
 			if (config.shCreate) {
 
-				tsHead[i] = new (ptr) TrieStore;
+				tsHead[i] = new (ptr) TrieStore((TrieStore *)this, 'a'+i);
 			}
 			else
 				tsHead[i] = ptr;

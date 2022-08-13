@@ -4,6 +4,8 @@
 
 struct MemMgrMetaData {
 
+	MemMgrMetaData(){}
+
 	interprocess_mutex 	mutex;						// from boost library.
 	Int8				shName[SHM_NAME_SIZE];
 	UInt32				shmSize;
@@ -13,23 +15,29 @@ struct MemMgrMetaData {
 class MemoryMgr {
 
 public:
+
+	static MemoryMgr * Obj(DicConfig *config = nullptr);
 	
 	// Internal functions.
-	static DicStatus	InternalGetSharedMemory(DicConfig config);
+	BPtr		InternalGetSharedMemory(DicConfig * config);
 
 	// APIs
-	static DicStatus	Initialize(DicConfig& config);
-	static DicStatus	DeInitialize();
+	void		Initialize(DicConfig * config);
+	DicStatus	DeInitialize();
 
-	static BPtr			AllocMem(UInt32 size);
+	BPtr		AllocMem(UInt32 size);
 
 private:
 
-	// Defined private in order to prevent instantiating this class as all members are used as static.
-	MemoryMgr();
+	static MemoryMgr*		instance;
 
-	static MemMgrMetaData*		metaData;
-	static BPtr					shmPtr;
-	static bool					initialized;
+	// Defined private in order to prevent instantiating this class as all members are used as static.
+	MemoryMgr(DicConfig *config);
+	// TODO: ~MemoryMgr(BPtr shm);  call DeInitialize
+
+	MemMgrMetaData *		metaData;
+	BPtr					shmPtr;
+	shared_memory_object * 	shm;
+	mapped_region *			region;
 };
 

@@ -1,96 +1,107 @@
 #include "MemoryMgr.hpp"
 
-MemMgrMetaData *	MemoryMgr::metaData		= nullptr;
-BPtr				MemoryMgr::shmPtr		= nullptr;
-bool				MemoryMgr::initialized	= false;
+MemoryMgr *			MemoryMgr::instance		= nullptr;
 
-DicStatus MemoryMgr::InternalGetSharedMemory(DicConfig config) {
 
-	DicStatus rc = DIC_SUCCESS;
 
-	shared_memory_object * shm;
 
-	if (config.shCreate) {
+MemoryMgr::MemoryMgr(DicConfig *config) {
+
+
+	shmPtr = InternalGetSharedMemory(config);
+
+	Initialize(config);
+
+};
+
+MemoryMgr* MemoryMgr::Obj(DicConfig * config) {
+
+	if (instance == nullptr) {
+
+		if (config == nullptr)
+			return nullptr;
+
+		instance = new MemoryMgr(config);
+	}
+
+	return instance;
+}
+
+BPtr MemoryMgr::InternalGetSharedMemory(DicConfig * config) {
+
+	BPtr shmAddr;
+	cout << "Config: \n create/open: " << config->shCreate << endl;
+	cout << "Name: " << config->shName << endl;
+	cout << "Size: " << config->shSize << endl;
+
+	if (config->shCreate) {
 
 		// remove old SHM with same name.
-		shared_memory_object::remove(config.shName);
+		shared_memory_object::remove(config->shName);
 
 		cout << "Creating Shared Memory" << endl;
-		shm = new shared_memory_object(create_only, config.shName, read_write);
-		shm->truncate(config.shSize); //Set size
+		shm = new shared_memory_object(create_only, config->shName, read_write);
+		shm->truncate(config->shSize); //Set size
+
+		//Map the whole shared memory in this process
+		region = new mapped_region(*shm, read_write);
+
+		shmAddr = (BPtr)region->get_address();
 	}
 	else {
 
 		cout << "Opening Shared Memory" << endl;
-		shm = new shared_memory_object(open_only, config.shName, read_write);
+		shm = new shared_memory_object(open_only, config->shName, read_write);
+
+		//Map the whole shared memory in this process
+		region = new mapped_region(*shm, read_write);
+
+		shmAddr = (BPtr)region->get_address();
 	}
 
-	//Map the whole shared memory in this process
-	mapped_region region(*shm , read_write);
+	if (shmAddr == nullptr) {
+		cout << "SHM Creation Failed." << endl;
+		exit(EXIT_FAILURE);
+	}
 
-	shmPtr = (BPtr)region.get_address();
-	if (shmPtr == nullptr)
-		return MEM_INIT_ERROR;
+	cout << "Shared Memory address : " << (UInt32)shmAddr << endl;
 
-	cout << "Shared Memory address : " << shmPtr << endl;
-	
-
-	return rc;
+	return shmAddr;
 }
 
-DicStatus MemoryMgr::Initialize(DicConfig & config) {
+void MemoryMgr::Initialize(DicConfig * config) {
 
-	// Ip params are already validated.
+	if (config->shCreate) {
 
-	if (initialized)
-		return MEM_INIT_ERROR;
+		// allocate MemMgrMetaData
+		metaData = new (shmPtr) MemMgrMetaData;
 
-	DicStatus rc; 
+		// allocate MemMgrMetaData
+		scoped_lock<interprocess_mutex> lock(metaData->mutex);
+		cout << "MemoryMgr: Mutex locked for CreateMgr." << endl;
 
-	rc = InternalGetSharedMemory(config);
+		metaData->shmSize		= config->shSize;
+		memcpy(metaData->shName, config->shName, SHM_NAME_SIZE);
 
-	// if no error so far, we are safe to proceed to init SHM. No one else will try to initialize now.
-	if (!rc) {
+		metaData->freeOffset	= sizeof(MemMgrMetaData);
+	}
+	else {
 
-		if (config.shCreate) {
+		// allocate MemMgrMetaData
+		metaData =  (MemMgrMetaData *)shmPtr;
 
-			// allocate MemMgrMetaData
-			metaData = new (shmPtr) MemMgrMetaData;
+		// allocate MemMgrMetaData
+		scoped_lock<interprocess_mutex> lock(metaData->mutex);
+		cout << "MemoryMgr: Mutex locked for OpenMgr." << endl;
 
-			// allocate MemMgrMetaData
-			scoped_lock<interprocess_mutex> lock(metaData->mutex);
-			cout << "MemoryMgr: Mutex locked for CreateMgr." << endl;
-
-			metaData->shmSize		= config.shSize;
-			memcpy(metaData->shName, config.shName, SHM_NAME_SIZE);
-
-			metaData->freeOffset	= sizeof(MemMgrMetaData);
-		
-			initialized = true;
-		}
-		else {
-
-			// allocate MemMgrMetaData
-			metaData =  (MemMgrMetaData *)shmPtr;
-
-			// allocate MemMgrMetaData
-			scoped_lock<interprocess_mutex> lock(metaData->mutex);
-			cout << "MemoryMgr: Mutex locked for OpenMgr." << endl;
-
-			if (initialized == false || strncmp(metaData->shName, config.shName, SHM_NAME_SIZE) != 0)
-				rc = MEM_INIT_ERROR;
-		}
-
-		cout << "MemoryMgr Mutex UnLocked." << endl;
+		if (strncmp(metaData->shName, config->shName, SHM_NAME_SIZE) != 0)
+			exit(EXIT_FAILURE);
 	}
 
-	return rc;
+	cout << "MemoryMgr Mutex about to get UnLocked." << endl;
 }
 
 DicStatus	MemoryMgr::DeInitialize() {
-
-	if (!initialized)
-		return MEM_INIT_ERROR;
 
 	DicStatus rc = DIC_SUCCESS;
 	
@@ -98,15 +109,11 @@ DicStatus	MemoryMgr::DeInitialize() {
 	scoped_lock<interprocess_mutex> lock(metaData->mutex);
 
 	shared_memory_object::remove(metaData->shName);
-	
-		
+
 	return rc;
 }	
 	
 BPtr MemoryMgr::AllocMem(UInt32 size) {
-
-	if (!initialized)
-		return nullptr;
 
 	scoped_lock<interprocess_mutex> lock(metaData->mutex);
 

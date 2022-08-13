@@ -19,7 +19,9 @@ class TrieStore {
 
 public:
 
-	TrieStore();
+	// TODO: extra parameters added for debugging. Delete later.
+	TrieStore(TrieStore * parent, char c);
+	// TODO: ~TrieStore(); call MemMgr DeInitialize.
 		
 	DicStatus InsertWord(UInt32 i, const string word, const string definition);
 
@@ -40,6 +42,10 @@ private:
 	
 		BPtr				wordPtr;
 		UInt16				defLen;
+
+		// TODO: debugging purpose. Delete later.
+		TrieStore *			parent; 
+		char 				ch;
 };
 
 
