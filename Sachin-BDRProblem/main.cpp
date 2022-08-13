@@ -1,8 +1,10 @@
 
 #include "Dictionary.hpp"
 
+// for ease of testing.
 
 Dictionary *dict;
+DicStatus rc;
 
 void initialize(bool createSHM) {
 
@@ -16,94 +18,83 @@ void initialize(bool createSHM) {
 
 }
 
-void search(string word, string def){
+void insert(string word, string def) {
 
+    rc = dict->InsertWord(word, def);
+    if (!rc)
+        cout << "Insert Success for word: " << word << endl;
+    else
+        cout << "Insert failed for " << word << endl;
+}
+
+void delete(string word) {
+
+    cout << "Deleting word: " << word << endl;
+    rc = dict->DeleteWord(word);
+    if (!rc)
+        cout << "Word Deleted successfully\n";
+    else
+        cout << "Delete failed\n";
+}
+
+void search(string word){
+
+    string def;
+    
+    cout << "searching for: " << word << endl;
+    rc = dict->SearchWord(word, def);
+    if (!rc)
+        cout << "Word: " << word << ", found.\n Def: " << def << endl;
+    else
+        cout << "Word: " << word << " doesn't exist in dictionary.\n";
 }
 
 void TestBasicCases() {
 
     DicStatus rc;
     
+    // insert new word
     string word = "sample";
     string def = "A small part or quantity intended to show what the whole is like: investigations involved analyzing samples of handwriting";
+    insert(word, def);
 
-    rc = dict->InsertWord(word, def);
-    if(!rc)
-        cout << "Insert Success for word: " << word << endl;
-    else
-        cout << "Insert failed for " << word << endl;
+    // insert word that is already inserted earlier.
+    insert(word, def);
 
+    // insert new word
     word = "hint";
     def = "a slight or indirect indication or suggestion: he has given no hint of his views";
+    insert(word, def);
 
-    rc = dict->InsertWord(word, def);
-    if (!rc)
-        cout << "Insert Success for word: " << word << endl;
-    else
-        cout << "Insert failed for " << word << endl;
-
+    // search existing word
     word = "sample";
-    cout << "searching for: " << word << endl; 
-    rc = dict->SearchWord(word, def);
-    if (!rc)
-        cout << "Word: " << word << ", found.\n Def: " << def << endl;
-    else
-        cout << "Word: " << word << " doesn't exist in dictionary.\n";
+    search(word);
 
-
+    // search word that is not yet inserted
     word = "sachin";
-    cout << "searching for: " << word << endl; 
-    rc = dict->SearchWord(word, def);
-    if (!rc)
-        cout << "Word: " << word << ", found.\n Def: " << def << endl;
-    else
-        cout << "Word: " << word << " doesn't exist in dictionary.\n";
-        
+    search(word);        
 
+    // search existing word
     word = "hint";
-    cout << "searching for: " << word << endl; 
-    rc = dict->SearchWord(word, def);
-    if (!rc)
-        cout << "Word: " << word << ", found.\n Def: " << def << endl;
-    else
-        cout << "Word: " << word << " doesn't exist in dictionary.\n";
+    search(word);
     
     word = "hint";
-    cout << "Deleting word: " << word << endl; 
-    rc = dict->DeleteWord(word);
-    if (!rc)
-        cout << "Word Deleted successfully\n";
-    else
-        cout << "Delete failed\n";
+    delted(word);
 
+    // search deleted word.
     word = "hint";
-    cout << "searching for: " << word << endl; 
-    rc = dict->SearchWord(word, def);
-    if (!rc)
-        cout << "Word: " << word << ", found.\n Def: " << def << endl;
-    else
-        cout << "Word: " << word << " doesn't exist in dictionary.\n";
+    search(word);
 
+    // insert same deleted word with larger length of 'def'
     word = "hint";
     def = "a slight or indirect indication or suggestion: he has given no hint of his views.\n It is a noun.\n E.g.\"Give me a 'hint'!\"\n";
-
-    rc = dict->InsertWord(word, def);
-    if (!rc)
-        cout << "Insert Success for word: " << word << endl;
-    else
-        cout << "Insert failed for " << word << endl;
-
+    insert(word, def);
     
+    // search newly inserted word (which was deleted earlier)
     word = "hint";
-    cout << "searching for: " << word << endl; 
-    rc = dict->SearchWord(word, def);
-    if (!rc)
-        cout << "Word: " << word << ", found.\n Def: " << def << endl;
-    else
-        cout << "Word: " << word << " doesn't exist in dictionary.\n";
-
+    search(word);
 }
-
+/*
 void TestParallelProcessCases() {
 
     int i;
@@ -118,7 +109,7 @@ void TestParallelProcessCases() {
     }while (i != 0);
 
 
-}
+}*/
 
 int main (int argc, char *argv[]) {
 
@@ -138,7 +129,7 @@ int main (int argc, char *argv[]) {
 
     TestBasicCases();
 
-    TestParallelProcessCases();
+    //TestParallelProcessCases();
 
     return 0;
 }
