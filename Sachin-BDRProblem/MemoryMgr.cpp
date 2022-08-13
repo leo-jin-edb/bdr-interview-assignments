@@ -1,4 +1,5 @@
 #include "MemoryMgr.hpp"
+#include <stdio.h>
 
 MemoryMgr *			MemoryMgr::instance		= nullptr;
 
@@ -27,9 +28,11 @@ MemoryMgr* MemoryMgr::Obj(DicConfig * config) {
 	return instance;
 }
 
+
 BPtr MemoryMgr::InternalGetSharedMemory(DicConfig * config) {
 
 	BPtr shmAddr;
+
 	cout << "Config: \n create/open: " << config->shCreate << endl;
 	cout << "Name: " << config->shName << endl;
 	cout << "Size: " << config->shSize << endl;
@@ -42,22 +45,17 @@ BPtr MemoryMgr::InternalGetSharedMemory(DicConfig * config) {
 		cout << "Creating Shared Memory" << endl;
 		shm = new shared_memory_object(create_only, config->shName, read_write);
 		shm->truncate(config->shSize); //Set size
-
-		//Map the whole shared memory in this process
-		region = new mapped_region(*shm, read_write);
-
-		shmAddr = (BPtr)region->get_address();
 	}
 	else {
 
 		cout << "Opening Shared Memory" << endl;
 		shm = new shared_memory_object(open_only, config->shName, read_write);
-
-		//Map the whole shared memory in this process
-		region = new mapped_region(*shm, read_write);
-
-		shmAddr = (BPtr)region->get_address();
 	}
+
+	//Map the whole shared memory in this process
+	region = new mapped_region(*shm, read_write);
+
+	shmAddr = (BPtr)region->get_address();
 
 	if (shmAddr == nullptr) {
 		cout << "SHM Creation Failed." << endl;
@@ -78,7 +76,6 @@ void MemoryMgr::Initialize(DicConfig * config) {
 
 		// allocate MemMgrMetaData
 		scoped_lock<interprocess_mutex> lock(metaData->mutex);
-		cout << "MemoryMgr: Mutex locked for CreateMgr." << endl;
 
 		metaData->shmSize		= config->shSize;
 		memcpy(metaData->shName, config->shName, SHM_NAME_SIZE);
@@ -92,13 +89,11 @@ void MemoryMgr::Initialize(DicConfig * config) {
 
 		// allocate MemMgrMetaData
 		scoped_lock<interprocess_mutex> lock(metaData->mutex);
-		cout << "MemoryMgr: Mutex locked for OpenMgr." << endl;
 
 		if (strncmp(metaData->shName, config->shName, SHM_NAME_SIZE) != 0)
 			exit(EXIT_FAILURE);
 	}
 
-	cout << "MemoryMgr Mutex about to get UnLocked." << endl;
 }
 
 DicStatus	MemoryMgr::DeInitialize() {
