@@ -1,11 +1,12 @@
 #include "Dictionary.hpp"
 
-Dictionary::Dictionary(DicConfig & config) {
+Dictionary::Dictionary(bool createSHM) {
 
-    if (config.shName[0] == '\0')
-        exit(EXIT_FAILURE);
-
-    tsMgr = nullptr;
+    DicConfig config = {
+                createSHM,
+                "SachinRSharedMemory",
+                DEFAULT_SHM_SIZE
+            };
 
     tsMgr = new TrieStoreMgr(config);
 }

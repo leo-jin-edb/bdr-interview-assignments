@@ -10,13 +10,7 @@ void initialize(bool createSHM) {
 
     cout << "================  Initializing  ==================" << endl;
 
-    DicConfig config = {
-        createSHM,
-        "SachinRSharedMemory",
-        DEFAULT_SHM_SIZE
-    };
-
-    dict = new Dictionary(config);
+    dict = new Dictionary(createSHM);
 
 }
 
@@ -116,22 +110,67 @@ void TestBasicCases() {
     word = "hint";
     search(word);
 }
-/*
+
+
 void TestParallelProcessCases() {
 
     int i;
+    bool exitapp = false;
 
     do {
 
+        string word, def;
+
+        cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << endl;
+
         cout << "Enter Your Choice: \n";
 
-        cout << ""
+        cout << "1: Insert Word\n";
+        cout << "2: Delete Word\n";
+        cout << "3: Search Word\n";
+        cout << "0: Exit application\n";
+
+        cin >> i;
+
+        switch (i) {
+
+            case 0:
+                exitapp = true;
+                break;
+
+            case 1:
+                cout << "Enter word to insert:\n";
+                cin >> word;
+                cout << "Enter definition for the word:\n";
+
+                cin.ignore(100, '\n');
+                getline(std::cin, def);
+                insert(word, def);
+
+                break;
+
+            case 2:
+                cout << "Enter word to delete:\n";
+                cin >> word;
+                deletew(word);
+
+                break;
+
+            case 3:
+                cout << "Enter word to search:\n";
+                cin >> word;
+                search(word);
+
+                break;
+
+            default:
+                cout << "Enter correct choice... Try Again.\n";
+        }
+
+    }while (exitapp == false);
 
 
-    }while (i != 0);
-
-
-}*/
+}
 
 int main (int argc, char *argv[]) {
 
@@ -149,7 +188,7 @@ int main (int argc, char *argv[]) {
 
     TestBasicCases();
 
-    //TestParallelProcessCases();
+    TestParallelProcessCases();
 
     return 0;
 }

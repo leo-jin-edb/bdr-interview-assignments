@@ -29,7 +29,6 @@ typedef void *				VPtr;
 
 // TODO: we are initializing SHM with 128 MB in one shot. TODO: All SHM memory is allocated in beginning. 
 // Improve: initialize SHM with less memory first & then expand SHM as and when required.
-#define DEFAULT_SHM_SIZE					134217728 // 2^27 
 #define SHM_NAME_SIZE						32
 
 struct DicConfig {

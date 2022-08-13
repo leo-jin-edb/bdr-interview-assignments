@@ -2,11 +2,13 @@
 
 #include "TrieStore.hpp"
 
+#define DEFAULT_SHM_SIZE					134217728 // 2^27 
+
 class Dictionary {
 
     public:
 
-        Dictionary(DicConfig & config);
+        Dictionary(bool createSHM);
 
         DicStatus InsertWord(const string word, const string definition);
         DicStatus DeleteWord(const string word);
