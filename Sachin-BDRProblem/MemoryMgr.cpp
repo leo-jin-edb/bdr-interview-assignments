@@ -81,6 +81,8 @@ void MemoryMgr::Initialize(DicConfig * config) {
 		memcpy(metaData->shName, config->shName, SHM_NAME_SIZE);
 
 		metaData->freeOffset	= sizeof(MemMgrMetaData);
+
+		cout << "MemMgr current offset: " << metaData->freeOffset << endl;
 	}
 	else {
 
@@ -92,6 +94,8 @@ void MemoryMgr::Initialize(DicConfig * config) {
 
 		if (strncmp(metaData->shName, config->shName, SHM_NAME_SIZE) != 0)
 			exit(EXIT_FAILURE);
+		
+		cout << "MemMgr current offset: " << metaData->freeOffset << endl;
 	}
 
 }
@@ -118,6 +122,15 @@ BPtr MemoryMgr::AllocMem(UInt32 size) {
 	BPtr ptr = shmPtr + metaData->freeOffset;
 	metaData->freeOffset += size;
 
+	cout << "MemMgr: ptr: " << ptr << ". New offset: " << metaData->freeOffset << endl;
+
 	return ptr;
 }
 
+BPtr MemoryMgr::GetAppDataBuff(UInt32 offset) {
+
+
+	scoped_lock<interprocess_mutex> lock(metaData->mutex);
+
+	return shmPtr +  sizeof(MemMgrMetaData) + offset;
+}

@@ -26,6 +26,10 @@ public:
 	DicStatus	DeInitialize();
 
 	BPtr		AllocMem(UInt32 size);
+	BPtr		GetAppDataBuff(UInt32 offset);
+
+friend class TrieStore;
+friend class TrieStoreMgr;
 
 private:
 

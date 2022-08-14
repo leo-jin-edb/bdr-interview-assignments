@@ -123,12 +123,12 @@ void TestParallelProcessCases() {
 
         cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << endl;
 
-        cout << "Enter Your Choice: \n";
-
         cout << "1: Insert Word\n";
         cout << "2: Delete Word\n";
         cout << "3: Search Word\n";
         cout << "0: Exit application\n";
+
+        cout << "Enter Your Choice: ";
 
         cin >> i;
 
@@ -186,7 +186,7 @@ int main (int argc, char *argv[]) {
 
     initialize(createSHM);
 
-    TestBasicCases();
+    //TestBasicCases();
 
     TestParallelProcessCases();
 

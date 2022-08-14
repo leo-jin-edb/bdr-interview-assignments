@@ -68,7 +68,6 @@ private:
 	* Head Trie node of each alphabet. This is stored/retried using MemMgr as AppData
 	* */
 
-	interprocess_mutex 	* mutex;
 	TrieStore * tsHead[MAX_NEXT_TSNODES];
 };
 

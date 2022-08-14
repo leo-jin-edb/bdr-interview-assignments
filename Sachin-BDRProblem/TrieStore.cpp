@@ -146,25 +146,22 @@ TrieStoreMgr::TrieStoreMgr(DicConfig & config) {
 
 	if (memMgr) {
 
-		BPtr mptr = memMgr->AllocMem(sizeof(interprocess_mutex));
-
-		if (config.shCreate)
-			mutex = new (mptr) interprocess_mutex;
-		else
-			mutex = (interprocess_mutex*)mptr;
-
-		scoped_lock<interprocess_mutex> lock(*mutex);
-
-		for (int i = 0; i < MAX_NEXT_TSNODES; i++) {
-
-			TrieStore* ptr = (TrieStore*)memMgr->AllocMem(sizeof(TrieStore));
+		for (int i = 0, offset = 0; i < MAX_NEXT_TSNODES; i++) {
 
 			if (config.shCreate) {
 
-				tsHead[i] = new (ptr) TrieStore((TrieStore *)this, 'a'+i);
+				TrieStore *ptr = (TrieStore *)memMgr->AllocMem(sizeof(TrieStore));
+
+				if (ptr == nullptr)
+					exit(EXIT_FAILURE);
+
+				tsHead[i] = new (ptr) TrieStore((TrieStore *)this, 'a'+ i);
 			}
-			else
-				tsHead[i] = ptr;
+			else {
+
+				tsHead[i] = (TrieStore *)memMgr->GetAppDataBuff(offset);
+				offset += sizeof(TrieStore);
+			}
 		}
 	}
 	else
