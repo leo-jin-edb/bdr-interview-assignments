@@ -12,6 +12,8 @@
 #include <boost/interprocess/sync/scoped_lock.hpp>
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 
+#include <boost/core/no_exceptions_support.hpp>
+
 // added below namespaces just to avoid using their names everywhere.
 using namespace std;
 using namespace boost::interprocess;

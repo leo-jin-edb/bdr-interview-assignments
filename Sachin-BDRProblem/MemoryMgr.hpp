@@ -28,6 +28,7 @@ public:
 	BPtr		AllocMem(UInt32 size);
 	BPtr		GetAppDataBuff(UInt32 offset);
 
+// TODO: Debugging purpose. Delete later.
 friend class TrieStore;
 friend class TrieStoreMgr;
 
