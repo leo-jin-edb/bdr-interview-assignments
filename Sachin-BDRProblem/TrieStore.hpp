@@ -56,7 +56,7 @@ class TrieStoreMgr {
 
 public:
 
-	TrieStoreMgr(DicConfig & config);
+	TrieStoreMgr(DicConfig * config);
 
 	DicStatus InsertWord(string word, const string definition);
 	DicStatus DeleteWord(string word);
@@ -64,8 +64,7 @@ public:
 
 private:
 
-	/*
-	* Head Trie node of each alphabet. This is stored/retried using MemMgr as AppData
+	/* Head Trie node of each alphabet. This is stored/retried using MemMgr as AppData
 	* */
 
 	TrieStore * tsHead[MAX_NEXT_TSNODES];

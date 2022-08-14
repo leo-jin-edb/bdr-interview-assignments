@@ -140,15 +140,15 @@ DicStatus TrieStore::SearchWord(UInt32 i, const string word, string & definition
 
 ///////////// TrieStoreMgr APIs ////////////////////////
 
-TrieStoreMgr::TrieStoreMgr(DicConfig & config) {
+TrieStoreMgr::TrieStoreMgr(DicConfig * config) {
 
-	MemoryMgr * memMgr = MemoryMgr::Obj(&config);
+	MemoryMgr * memMgr = MemoryMgr::Obj(config);
 
 	if (memMgr) {
 
 		for (int i = 0, offset = 0; i < MAX_NEXT_TSNODES; i++) {
 
-			if (config.shCreate) {
+			if (config->shCreate) {
 
 				TrieStore *ptr = (TrieStore *)memMgr->AllocMem(sizeof(TrieStore));
 

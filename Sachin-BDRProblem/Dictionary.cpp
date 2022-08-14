@@ -8,7 +8,7 @@ Dictionary::Dictionary(bool createSHM) {
                 DEFAULT_SHM_SIZE
             };
 
-    tsMgr = new TrieStoreMgr(config);
+    tsMgr = new TrieStoreMgr(&config);
 }
 
 DicStatus Dictionary::InsertWord(const string word, const string definition) {
