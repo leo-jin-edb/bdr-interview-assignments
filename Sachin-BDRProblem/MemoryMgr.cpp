@@ -57,6 +57,9 @@ BPtr MemoryMgr::InternalGetSharedMemory(DicConfig * config) {
 
 	shmAddr = (BPtr)region->get_address();
 
+	if (shmAddr == nullptr)
+		exit(EXIT_FAILURE); // possibly due to race condition. 2 parallel processes trying to create 
+
 	if (shmAddr == nullptr) {
 		cout << "SHM Creation Failed." << endl;
 		exit(EXIT_FAILURE);
@@ -131,6 +134,8 @@ BPtr MemoryMgr::GetAppDataBuff(UInt32 offset) {
 
 
 	scoped_lock<interprocess_mutex> lock(metaData->mutex);
+
+	cout << "MemMgr: AppData Ptr: " << BPtr(shmPtr +  sizeof(MemMgrMetaData) + offset) << endl;
 
 	return shmPtr +  sizeof(MemMgrMetaData) + offset;
 }

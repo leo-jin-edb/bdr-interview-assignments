@@ -34,7 +34,8 @@ public:
 
 private:
 
-		interprocess_mutex 	mutex;
+		//interprocess_mutex 	mutex;
+		pthread_mutex_t			mutex;
 
 		TrieStore *			nextTS[MAX_NEXT_TSNODES]; // 26*4 = 104 bytes
 

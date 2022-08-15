@@ -57,4 +57,8 @@ enum DicStatus {
 
 	// boost library errors related to interprocess mutex or shared memory.
 	BOOST_LIB_ERR = 300,
+
+	// pthread errors
+	PTHREAD_LOCK_ERROR,
+
 };

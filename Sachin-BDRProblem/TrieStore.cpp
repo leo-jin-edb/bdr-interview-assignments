@@ -7,37 +7,67 @@ TrieStore::TrieStore(TrieStore *p, char c) {
 	wordPtr = nullptr;
 	parent = p;
 	ch = c;
+
+	// mutex init
+	int rc;
+	pthread_mutexattr_t attr;
+
+	rc = pthread_mutexattr_init(&attr);
+	if (!rc)
+	{
+		rc = pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+		if (!rc)
+		{
+			rc = pthread_mutex_init(&mutex, &attr);
+			if (!rc)
+			{
+				rc = pthread_mutexattr_destroy(&attr);
+			}
+		}
+	}
+
+	if (rc)
+		exit(EXIT_FAILURE);
+
+	// TODO: handle erros as exceptions
 }
 
-DicStatus TrieStore::InsertWord(UInt32 i, const string word, const string definition) {
+DicStatus TrieStore::InsertWord(UInt32 i, const string word, const string definition)
+{
 
 	// TODO: There is a possible partial write issue here if write partial data & process crashes abruptly. Not handled as of now.
 
 	DicStatus rc = DIC_SUCCESS;
-	TrieStore* nextPtr = nullptr;
+	TrieStore *nextPtr = nullptr;
 
 	{
-		scoped_lock<interprocess_mutex> lock(mutex);
+		//scoped_lock<interprocess_mutex> lock(mutex);
 
-		if (i == word.size() - 1) {
+		if (pthread_mutex_lock(&mutex))
+			return PTHREAD_LOCK_ERROR;
+
+		if (i == word.size() - 1)
+		{
 
 			// reached destination TS node.
-			if (wordPtr == nullptr) {
+			if (wordPtr == nullptr)
+			{
 
 				defLen = definition.size();
 
 				wordPtr = MemoryMgr::Obj()->AllocMem(defLen);
 
-				if (wordPtr) {
+				if (wordPtr)
+				{
 
 					memcpy(wordPtr, definition.c_str(), defLen);
 				}
 			}
-			else {
+			else
+			{
 
 				rc = TST_WORD_ALREADY_EXISTS;
 			}
-				
 		}
 		else {
 			char ch = word[i + 1];
@@ -54,8 +84,12 @@ DicStatus TrieStore::InsertWord(UInt32 i, const string word, const string defini
 			}
 
 			// if mem allocation have failed, nextPtr would be still null
-			nextPtr = (TrieStore *)nextTS[IndexOf(ch)];
+			nextPtr = static_cast<TrieStore *>(nextTS[IndexOf(ch)]);
 		}
+
+		if (pthread_mutex_unlock(&mutex))
+			return PTHREAD_LOCK_ERROR;
+
 	} // lock released.
 
 	// if next pointer exist
@@ -72,7 +106,10 @@ DicStatus TrieStore::DeleteWord(UInt32 i, const string word) {
 	TrieStore* nextPtr = nullptr;
 
 	{
-		scoped_lock<interprocess_mutex> lock(mutex);
+		//scoped_lock<interprocess_mutex> lock(mutex);
+
+		if (pthread_mutex_lock(&mutex))
+			return PTHREAD_LOCK_ERROR;
 
 		if (i == word.size() - 1) {
 
@@ -89,11 +126,15 @@ DicStatus TrieStore::DeleteWord(UInt32 i, const string word) {
 		}
 		else {
 			char ch = word[i + 1];
-			nextPtr = (TrieStore*)nextTS[IndexOf(ch)];
+			nextPtr = static_cast<TrieStore *>(nextTS[IndexOf(ch)]);
 
 			if (nextPtr == nullptr)
 				rc = TST_WORD_DOESNOT_EXIST;
 		}
+
+		if (pthread_mutex_unlock(&mutex))
+			return PTHREAD_LOCK_ERROR;
+
 	} // lock released.
 
 	// if next pointer exist
@@ -110,7 +151,9 @@ DicStatus TrieStore::SearchWord(UInt32 i, const string word, string & definition
 	TrieStore* nextPtr	= nullptr;
 
 	{
-		scoped_lock<interprocess_mutex> lock(mutex);
+		//scoped_lock<interprocess_mutex> lock(mutex);
+		if (pthread_mutex_lock(&mutex))
+			return PTHREAD_LOCK_ERROR;
 
 		if (i == word.size() - 1) {
 
@@ -122,11 +165,15 @@ DicStatus TrieStore::SearchWord(UInt32 i, const string word, string & definition
 		}
 		else {
 			char ch = word[i + 1];
-			nextPtr = (TrieStore*)nextTS[IndexOf(ch)];
+			nextPtr = static_cast<TrieStore *>(nextTS[IndexOf(ch)]);
 
 			if (nextPtr == nullptr)
 				rc = TST_WORD_DOESNOT_EXIST;
 		}
+
+		if (pthread_mutex_unlock(&mutex))
+			return PTHREAD_LOCK_ERROR;
+
 	} // lock released.
 
 	// if we valid next pointer exist
@@ -143,6 +190,9 @@ DicStatus TrieStore::SearchWord(UInt32 i, const string word, string & definition
 TrieStoreMgr::TrieStoreMgr(DicConfig * config) {
 
 	MemoryMgr * memMgr = MemoryMgr::Obj(config);
+
+	// TODO: race conditions related to parallel processing, 2 processes trying to create initial TrieStore blocks.
+	// can maintain one mutex for this.
 
 	if (memMgr) {
 

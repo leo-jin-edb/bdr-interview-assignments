@@ -186,7 +186,7 @@ int main (int argc, char *argv[]) {
 
     initialize(createSHM);
 
-    //TestBasicCases();
+    TestBasicCases();
 
     TestParallelProcessCases();
 
