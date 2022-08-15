@@ -19,7 +19,9 @@ public:
 	static MemoryMgr * Obj(DicConfig *config = nullptr);
 	
 	// Internal functions.
-	BPtr		InternalGetSharedMemory(DicConfig * config);
+	VPtr 		InternalGetSharedMemory_Posix(DicConfig *config);
+	//VPtr		InternalGetSharedMemory_Managed(DicConfig * config); // TODO: debugging
+	VPtr		InternalGetSharedMemory(DicConfig * config);
 
 	// APIs
 	void		Initialize(DicConfig * config);
@@ -29,8 +31,10 @@ public:
 	BPtr		GetAppDataBuff(UInt32 offset);
 
 // TODO: Debugging purpose. Delete later.
-friend class TrieStore;
-friend class TrieStoreMgr;
+	static void sleepfor(UInt64 msec);
+
+	friend class TrieStore;
+	friend class TrieStoreMgr;
 
 private:
 
@@ -38,11 +42,13 @@ private:
 
 	// Defined private in order to prevent instantiating this class as all members are used as static.
 	MemoryMgr(DicConfig *config);
-	// TODO: ~MemoryMgr(BPtr shm);  call DeInitialize
+	// TODO: ~MemoryMgr(BPtr shm);  call DeInitialize, remove SHM
 
 	MemMgrMetaData *		metaData;
-	BPtr					shmPtr;
+	VPtr					shmPtr;
 	shared_memory_object * 	shm;
 	mapped_region *			region;
+
+	//managed_shared_memory 	*segment;
 };
 

@@ -4,6 +4,7 @@
 #include <string>
 
 // Boost library shared memory.
+#include <boost/interprocess/managed_shared_memory.hpp>
 
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -13,6 +14,15 @@
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 
 #include <boost/core/no_exceptions_support.hpp>
+
+// TODO: debugging purpose. remove later
+#include <chrono>
+#include <thread>
+
+// Posix SHM
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/types.h>
 
 // added below namespaces just to avoid using their names everywhere.
 using namespace std;
@@ -38,6 +48,8 @@ struct DicConfig {
 	bool			shCreate;	// true: create SHM, false: open SHM
 	Int8			shName[SHM_NAME_SIZE];
 	UInt32			shSize; 
+
+	UInt64 			handle; // TODO: debugging
 };
 
 enum DicStatus {

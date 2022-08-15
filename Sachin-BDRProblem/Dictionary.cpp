@@ -1,11 +1,17 @@
 #include "Dictionary.hpp"
 
-Dictionary::Dictionary(bool createSHM) {
+Dictionary::Dictionary(UInt64 handle) {
+
+    bool createSHM = true;
+
+    if (handle)
+        createSHM = false;
 
     DicConfig config = {
                 createSHM,
                 "SachinRSharedMemory",
-                DEFAULT_SHM_SIZE
+                DEFAULT_SHM_SIZE,
+                handle
             };
 
     tsMgr = new TrieStoreMgr(&config);

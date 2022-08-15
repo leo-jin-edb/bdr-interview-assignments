@@ -3,13 +3,10 @@
 
 MemoryMgr *			MemoryMgr::instance		= nullptr;
 
-
-
-
 MemoryMgr::MemoryMgr(DicConfig *config) {
 
 
-	shmPtr = InternalGetSharedMemory(config);
+	shmPtr = InternalGetSharedMemory_Posix(config);
 
 	Initialize(config);
 
@@ -27,11 +24,106 @@ MemoryMgr* MemoryMgr::Obj(DicConfig * config) {
 
 	return instance;
 }
+VPtr MemoryMgr::InternalGetSharedMemory_Posix(DicConfig * config) {
+
+	VPtr shmAddr;
+
+	cout << "Config: \n create/open: " << config->shCreate << endl;
+	cout << "Name: " << config->shName << endl;
+	cout << "Size: " << config->shSize << endl;
+	cout << "Handle: " << config->handle << endl;
+
+	if (config->shCreate) {
+
+		
+
+		int shmid =shmget((key_t)2345, config->shSize, 0666|IPC_CREAT); 
+		
+		printf("Key of shared memory is %d\n",shmid);
+
+		shmAddr = shmat(shmid,NULL,0);
+
+		// pass this argument as parameter to another process, opening SHM.
+		//cout << "------->> SHM Handle: " << handle << "------- " << endl;
+		// TODO: improvement: write this to file, which can be read from another process. 
+		// This can also help manage race condition of 2 processes trying to create SHM at the same time by opening file in exlcusive mode.
+	}
+	else {
+
+		cout << "Opening Shared Memory" << endl;
+
+		int shmid=shmget((key_t)2345, config->shSize, 0666);
+		printf("Key of shared memory is %d\n",shmid);
+		shmAddr	= shmat(shmid,NULL,0);
+	}
 
 
-BPtr MemoryMgr::InternalGetSharedMemory(DicConfig * config) {
+	if (shmAddr == nullptr)
+		exit(EXIT_FAILURE); // possibly due to race condition. 2 parallel processes trying to create 
+
+	if (shmAddr == nullptr) {
+		cout << "SHM Creation Failed." << endl;
+		exit(EXIT_FAILURE);
+	}
+
+	cout << "Shared Memory address : " << (UInt32)shmAddr << endl;
+
+	return shmAddr;
+}
+
+/*
+BPtr MemoryMgr::InternalGetSharedMemory_Managed(DicConfig * config) {
 
 	BPtr shmAddr;
+
+	cout << "Config: \n create/open: " << config->shCreate << endl;
+	cout << "Name: " << config->shName << endl;
+	cout << "Size: " << config->shSize << endl;
+	cout << "Handle: " << config->handle << endl;
+
+	if (config->shCreate) {
+
+		// remove old SHM with same name.
+		shared_memory_object::remove(config->shName);
+
+		cout << "Creating Shared Memory" << endl;
+
+		segment = new managed_shared_memory(create_only, config->shName, config->shSize);
+    	shmAddr = (BPtr)segment->allocate(config->shSize);
+
+		managed_shared_memory::handle_t handle = segment->get_handle_from_address(shmAddr);
+
+		// pass this argument as parameter to another process, opening SHM.
+		cout << "------->> SHM Handle: " << handle << "------- " << endl;
+		// TODO: improvement: write this to file, which can be read from another process. 
+		// This can also help manage race condition of 2 processes trying to create SHM at the same time by opening file in exlcusive mode.
+	}
+	else {
+
+		cout << "Opening Shared Memory" << endl;
+		segment = new managed_shared_memory(open_only, config->shName);
+		shmAddr = (BPtr)segment->get_address_from_handle(config->handle);
+	}
+
+
+	if (shmAddr == nullptr)
+		exit(EXIT_FAILURE); // possibly due to race condition. 2 parallel processes trying to create 
+
+	if (shmAddr == nullptr) {
+		cout << "SHM Creation Failed." << endl;
+		exit(EXIT_FAILURE);
+	}
+
+	cout << "Shared Memory address : " << (UInt32)shmAddr << endl;
+
+	return shmAddr;
+}
+*/
+
+
+VPtr MemoryMgr::InternalGetSharedMemory(DicConfig * config) {
+
+	VPtr shmAddr;
 
 	cout << "Config: \n create/open: " << config->shCreate << endl;
 	cout << "Name: " << config->shName << endl;
@@ -55,20 +147,18 @@ BPtr MemoryMgr::InternalGetSharedMemory(DicConfig * config) {
 	//Map the whole shared memory in this process
 	region = new mapped_region(*shm, read_write);
 
-	shmAddr = (BPtr)region->get_address();
-
-	if (shmAddr == nullptr)
-		exit(EXIT_FAILURE); // possibly due to race condition. 2 parallel processes trying to create 
+	shmAddr = (VPtr)region->get_address();
 
 	if (shmAddr == nullptr) {
 		cout << "SHM Creation Failed." << endl;
 		exit(EXIT_FAILURE);
 	}
 
-	cout << "Shared Memory address : " << (UInt32)shmAddr << endl;
+	cout << "Shared Memory address : " << (UInt64)shmAddr << endl;
 
 	return shmAddr;
 }
+
 
 void MemoryMgr::Initialize(DicConfig * config) {
 
@@ -120,12 +210,12 @@ BPtr MemoryMgr::AllocMem(UInt32 size) {
 	scoped_lock<interprocess_mutex> lock(metaData->mutex);
 
 	if ((metaData->freeOffset + size) >= metaData->shmSize)
-		return nullptr;
+		exit(EXIT_FAILURE); // TODO: handle graciously. Try to extend SHM, if not we could exit?
 
-	BPtr ptr = shmPtr + metaData->freeOffset;
+	BPtr ptr = (BPtr)((UInt64)shmPtr + metaData->freeOffset);
 	metaData->freeOffset += size;
 
-	cout << "MemMgr: ptr: " << ptr << ". New offset: " << metaData->freeOffset << endl;
+	cout << "MemMgr: shmPtr: " << (UInt64)shmPtr << ", ptr: " << (UInt64)ptr << ". New offset: " << metaData->freeOffset << endl;
 
 	return ptr;
 }
@@ -135,7 +225,13 @@ BPtr MemoryMgr::GetAppDataBuff(UInt32 offset) {
 
 	scoped_lock<interprocess_mutex> lock(metaData->mutex);
 
-	cout << "MemMgr: AppData Ptr: " << BPtr(shmPtr +  sizeof(MemMgrMetaData) + offset) << endl;
+	cout << "MemMgr: shmPtr: " << (UInt64)shmPtr << ", AppData: " << (UInt64)shmPtr +  sizeof(MemMgrMetaData) + offset << endl;
 
-	return shmPtr +  sizeof(MemMgrMetaData) + offset;
+	return (BPtr)((UInt64)shmPtr +  sizeof(MemMgrMetaData) + offset);
+}
+
+void MemoryMgr::sleepfor(UInt64 msec) {
+
+    std::chrono::milliseconds timespan(msec); // or whatever
+    std::this_thread::sleep_for(timespan);
 }

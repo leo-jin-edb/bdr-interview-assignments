@@ -46,7 +46,7 @@ private:
 
 		// TODO: debugging purpose. Delete later.
 		TrieStore *			parent; 
-		char 				ch;
+		char 				c;
 };
 
 

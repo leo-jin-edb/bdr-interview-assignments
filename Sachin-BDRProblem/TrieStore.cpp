@@ -1,12 +1,7 @@
 
 #include "TrieStore.hpp"
 
-TrieStore::TrieStore(TrieStore *p, char c) {
-
-	memset(nextTS, 0, sizeof(TrieStore*) * MAX_NEXT_TSNODES);
-	wordPtr = nullptr;
-	parent = p;
-	ch = c;
+void mutex_init(pthread_mutex_t *mutex) {
 
 	// mutex init
 	int rc;
@@ -18,7 +13,7 @@ TrieStore::TrieStore(TrieStore *p, char c) {
 		rc = pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
 		if (!rc)
 		{
-			rc = pthread_mutex_init(&mutex, &attr);
+			rc = pthread_mutex_init(mutex, &attr);
 			if (!rc)
 			{
 				rc = pthread_mutexattr_destroy(&attr);
@@ -30,6 +25,17 @@ TrieStore::TrieStore(TrieStore *p, char c) {
 		exit(EXIT_FAILURE);
 
 	// TODO: handle erros as exceptions
+}
+
+// TODO: Params p & c added for debugging only. Remove later.
+TrieStore::TrieStore(TrieStore *p, char mych) {
+
+	memset(nextTS, 0, sizeof(TrieStore*) * MAX_NEXT_TSNODES);
+	wordPtr = nullptr;
+	parent = p;
+	c = mych;
+	
+	mutex_init(&mutex);
 }
 
 DicStatus TrieStore::InsertWord(UInt32 i, const string word, const string definition)
@@ -56,12 +62,7 @@ DicStatus TrieStore::InsertWord(UInt32 i, const string word, const string defini
 				defLen = definition.size();
 
 				wordPtr = MemoryMgr::Obj()->AllocMem(defLen);
-
-				if (wordPtr)
-				{
-
-					memcpy(wordPtr, definition.c_str(), defLen);
-				}
+				memcpy(wordPtr, definition.c_str(), defLen);
 			}
 			else
 			{
@@ -76,11 +77,7 @@ DicStatus TrieStore::InsertWord(UInt32 i, const string word, const string defini
 			if (!nextTS[IndexOf(ch)]) {
 
 				ptr = MemoryMgr::Obj()->AllocMem(sizeof(TrieStore));
-
-				if (ptr) {
-
-					nextTS[IndexOf(ch)] = new (ptr) TrieStore(this, ch);
-				}
+				nextTS[IndexOf(ch)] = new (ptr) TrieStore(this, ch);
 			}
 
 			// if mem allocation have failed, nextPtr would be still null
@@ -173,7 +170,6 @@ DicStatus TrieStore::SearchWord(UInt32 i, const string word, string & definition
 
 		if (pthread_mutex_unlock(&mutex))
 			return PTHREAD_LOCK_ERROR;
-
 	} // lock released.
 
 	// if we valid next pointer exist
@@ -201,9 +197,6 @@ TrieStoreMgr::TrieStoreMgr(DicConfig * config) {
 			if (config->shCreate) {
 
 				TrieStore *ptr = (TrieStore *)memMgr->AllocMem(sizeof(TrieStore));
-
-				if (ptr == nullptr)
-					exit(EXIT_FAILURE);
 
 				tsHead[i] = new (ptr) TrieStore((TrieStore *)this, 'a'+ i);
 			}
