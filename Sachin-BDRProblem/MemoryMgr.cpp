@@ -54,10 +54,8 @@ VPtr MemoryMgr::InternalGetSharedMemory_Posix(DicConfig * config) {
 
 		memset(shmAddr, 0,config->shSize);
 
-		// pass this argument as parameter to another process, opening SHM.
-		//cout << "------->> SHM Handle: " << handle << "------- " << endl;
-		// TODO: improvement: write this to file, which can be read from another process. 
-		// This can also help manage race condition of 2 processes trying to create SHM at the same time by opening file in exlcusive mode.
+		// TODO: handle race condition if 2 processes try to createSHM at the same time.
+		// We can open file in exclusive access mode, write key to it & use it in another process to open SHM.
 	}
 	else {
 
@@ -82,56 +80,6 @@ VPtr MemoryMgr::InternalGetSharedMemory_Posix(DicConfig * config) {
 
 	return shmAddr;
 }
-
-/*
-BPtr MemoryMgr::InternalGetSharedMemory_Managed(DicConfig * config) {
-
-	BPtr shmAddr;
-
-	cout << "Config: \n create/open: " << config->shCreate << endl;
-	cout << "Name: " << config->shName << endl;
-	cout << "Size: " << config->shSize << endl;
-	cout << "Handle: " << config->handle << endl;
-
-	if (config->shCreate) {
-
-		// remove old SHM with same name.
-		shared_memory_object::remove(config->shName);
-
-		cout << "Creating Shared Memory" << endl;
-
-		segment = new managed_shared_memory(create_only, config->shName, config->shSize);
-    	shmAddr = (BPtr)segment->allocate(config->shSize);
-
-		managed_shared_memory::handle_t handle = segment->get_handle_from_address(shmAddr);
-
-		// pass this argument as parameter to another process, opening SHM.
-		cout << "------->> SHM Handle: " << handle << "------- " << endl;
-		// TODO: improvement: write this to file, which can be read from another process. 
-		// This can also help manage race condition of 2 processes trying to create SHM at the same time by opening file in exlcusive mode.
-	}
-	else {
-
-		cout << "Opening Shared Memory" << endl;
-		segment = new managed_shared_memory(open_only, config->shName);
-		shmAddr = (BPtr)segment->get_address_from_handle(config->handle);
-	}
-
-
-	if (shmAddr == nullptr)
-		exit(EXIT_FAILURE); // possibly due to race condition. 2 parallel processes trying to create 
-
-	if (shmAddr == nullptr) {
-		cout << "SHM Creation Failed." << endl;
-		exit(EXIT_FAILURE);
-	}
-
-	cout << "Shared Memory address : " << (UInt32)shmAddr << endl;
-
-	return shmAddr;
-}
-*/
-
 
 VPtr MemoryMgr::InternalGetSharedMemory(DicConfig * config) {
 

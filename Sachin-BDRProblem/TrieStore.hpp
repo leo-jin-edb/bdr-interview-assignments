@@ -21,8 +21,8 @@ class TrieStore {
 
 public:
 
-	// TODO: extra parameters added for debugging. Delete later.
-	TrieStore(TrieStore * parent, char c, bool mutexinit);
+	// TODO: extra parameter added for debugging. Delete later.
+	TrieStore(bool init);
 	// TODO: ~TrieStore(); call MemMgr DeInitialize.
 		
 	DicStatus InsertWord(UInt32 i, const string word, const string definition);
@@ -32,8 +32,6 @@ public:
 	DicStatus DeleteWord(UInt32 i, const string word);
 
 	DicStatus SearchWord(UInt32 i, const string word, string & definition);
-	
-friend char peek(TrieStore *);
 
 private:
 
@@ -46,14 +44,7 @@ private:
 	
 		UInt32					wordPtr;
 		UInt16					defLen;
-
-		// TODO: debugging purpose. Delete later.
-		TrieStore *			parent; 
-		char 				c;
 };
-
-
-
 
 
 class TrieStoreMgr {

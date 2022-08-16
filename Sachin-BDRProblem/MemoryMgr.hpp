@@ -20,7 +20,6 @@ public:
 	
 	// Internal functions.
 	VPtr 		InternalGetSharedMemory_Posix(DicConfig *config);
-	//VPtr		InternalGetSharedMemory_Managed(DicConfig * config); // TODO: debugging
 	VPtr		InternalGetSharedMemory(DicConfig * config);
 
 	// APIs
@@ -32,25 +31,20 @@ public:
 
 	VPtr		Ptr(UInt32 offset);
 
-// TODO: Debugging purpose. Delete later.
-	static void sleepfor(UInt64 msec);
-
-	friend class TrieStore;
-	friend class TrieStoreMgr;
-
 private:
 
 	static MemoryMgr*		instance;
 
 	// Defined private in order to prevent instantiating this class as all members are used as static.
 	MemoryMgr(DicConfig *config);
+
 	// TODO: ~MemoryMgr(BPtr shm);  call DeInitialize, remove SHM
 
 	MemMgrMetaData *		metaData;
 	VPtr					shmPtr;
+
+	// boost shared memory (alternate option)
 	shared_memory_object * 	shm;
 	mapped_region *			region;
-
-	//managed_shared_memory 	*segment;
 };
 

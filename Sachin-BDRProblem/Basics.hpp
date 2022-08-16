@@ -15,10 +15,6 @@
 
 #include <boost/core/no_exceptions_support.hpp>
 
-// TODO: debugging purpose. remove later
-#include <chrono>
-#include <thread>
-
 // Posix SHM
 #include <sys/ipc.h>
 #include <sys/shm.h>
@@ -48,8 +44,6 @@ struct DicConfig {
 	bool			shCreate;	// true: create SHM, false: open SHM
 	Int8			shName[SHM_NAME_SIZE];
 	UInt32			shSize; 
-
-	UInt64 			handle; // TODO: debugging
 };
 
 enum DicStatus {

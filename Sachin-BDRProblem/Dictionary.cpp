@@ -10,8 +10,7 @@ Dictionary::Dictionary(UInt64 handle) {
     DicConfig config = {
                 createSHM,
                 "SachinRSharedMemory",
-                DEFAULT_SHM_SIZE,
-                handle
+                DEFAULT_SHM_SIZE
             };
 
     tsMgr = new TrieStoreMgr(&config);

@@ -50,17 +50,13 @@ void mutex_init(pthread_mutex_t *mutex)
 	// TODO: handle erros as exceptions
 }
 
-// TODO: Params p & c added for debugging only. Remove later.
-TrieStore::TrieStore(TrieStore *p, char mych, bool mutexinit) {
+TrieStore::TrieStore(bool init) {
 
-	if (mutexinit)
-	{
+	// TODO: added extra param 'init' for debugging purpose. Remove it later.
+	if (init) {
+
 		memset(nextTS, 0, sizeof(nextTS[0]) * MAX_NEXT_TSNODES);
 		wordPtr = 0;
-		parent = p;
-		c = mych;
-
-		mutex_init(&mutex);
 	}
 }
 
@@ -112,7 +108,7 @@ DicStatus TrieStore::InsertWord(UInt32 i, const string word, const string defini
 
 			ptr = (BPtr)MemoryMgr::Obj()->Ptr(nextTS[IndexOf(ch)]);
 
-			nextPtr = new (ptr) TrieStore(this, ch, init);
+			nextPtr = new (ptr) TrieStore(init);
 
 			// if mem allocation have failed, nextPtr would be still null
 			//nextPtr = static_cast<TrieStore *>(nextTS[IndexOf(ch)]);
