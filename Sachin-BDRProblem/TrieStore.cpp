@@ -1,27 +1,5 @@
 
 #include "TrieStore.hpp"
-char peek(TrieStore *ts)
-{
-
-return ts->c;
-/*
-	switch (i)
-	{
-	case 0:
-		return (VPtr)ts->c;
-	case 1:
-		return (VPtr)ts->parent;
-	case 2:
-		return (VPtr)ts->defLen;
-	case 3:
-		return (VPtr)ts->wordPtr;
-	default:
-		return nullptr;
-	};
-
-	return nullptr;
-	*/
-}
 
 void mutex_init(pthread_mutex_t *mutex)
 {
@@ -160,7 +138,7 @@ DicStatus TrieStore::DeleteWord(UInt32 i, const string word) {
 			else {
 
 				ptr = (BPtr)MemoryMgr::Obj()->Ptr(nextTS[IndexOf(ch)]);
-				nextPtr = new (ptr) TrieStore(this, ch, false);
+				nextPtr = new (ptr) TrieStore(false);
 			}
 		}
 
@@ -208,7 +186,7 @@ DicStatus TrieStore::SearchWord(UInt32 i, const string word, string & definition
 			else {
 
 				ptr = (BPtr)MemoryMgr::Obj()->Ptr(nextTS[IndexOf(ch)]);
-				nextPtr = new (ptr) TrieStore(this, ch, false);
+				nextPtr = new (ptr) TrieStore(false);
 			}
 		}
 
@@ -244,7 +222,7 @@ TrieStoreMgr::TrieStoreMgr(DicConfig * config) {
 
 				TrieStore *ptr = (TrieStore *)memMgr->Ptr(offset);
 
-				tsHead[i] = new (ptr) TrieStore((TrieStore *)this, 'a'+ i, true);
+				tsHead[i] = new (ptr) TrieStore(true);
 			}
 			else {
 

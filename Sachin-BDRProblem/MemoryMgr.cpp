@@ -172,13 +172,9 @@ UInt32 MemoryMgr::AllocMem(UInt32 size) {
 	if ((metaData->freeOffset + size) >= metaData->shmSize)
 		exit(EXIT_FAILURE); // TODO: handle graciously. Try to extend SHM, if not we could exit?
 
-	VPtr ptr = (VPtr)((BPtr)shmPtr + metaData->freeOffset);
 	UInt32 ret = metaData->freeOffset;
 
 	metaData->freeOffset += size;
-
-	cout << "MemMgr: shmPtr: " << (UInt32 *)shmPtr << ", ptr: " << (UInt32 *)ptr << "(" << ret 
-		 << "). New offset: " << metaData->freeOffset << endl;
 
 	return ret;
 }
@@ -190,17 +186,9 @@ VPtr MemoryMgr::GetAppDataBuff(UInt32 offset) {
 
 	VPtr ret = (VPtr)((BPtr)shmPtr +  sizeof(MemMgrMetaData) + offset);
 
-	cout << "MemMgr: shmPtr: " << (UInt32 *)shmPtr << ", AppData: " << (UInt32 *)ret << endl;
-
 	return ret;
 }
 
 VPtr MemoryMgr::Ptr(UInt32 offset) {
 	return (VPtr)((BPtr)shmPtr+offset);
-}
-
-void MemoryMgr::sleepfor(UInt64 msec) {
-
-    std::chrono::milliseconds timespan(msec); // or whatever
-    std::this_thread::sleep_for(timespan);
 }

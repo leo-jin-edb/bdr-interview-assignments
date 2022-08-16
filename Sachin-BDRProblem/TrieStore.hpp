@@ -14,8 +14,6 @@ const UInt8 MAX_NEXT_TSNODES = 26;
 * 2) When any word is deleted, we free 'selfWordPtr' memory & just mark it null. We don't delete Trie Node.
 *
 */
-class TrieStore;
-char peek(TrieStore * ts);
 
 class TrieStore {
 
