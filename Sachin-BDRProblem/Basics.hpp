@@ -2,18 +2,12 @@
 
 #include <iostream>
 #include <string>
+#include <sstream>
+#include <algorithm>
 
-// Boost library shared memory.
-#include <boost/interprocess/managed_shared_memory.hpp>
-
-#include <boost/interprocess/shared_memory_object.hpp>
-#include <boost/interprocess/mapped_region.hpp>
-
-// Boost library inter-process mutexes.
-#include <boost/interprocess/sync/scoped_lock.hpp>
-#include <boost/interprocess/sync/interprocess_mutex.hpp>
-
-#include <boost/core/no_exceptions_support.hpp>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 // Posix SHM
 #include <sys/ipc.h>
@@ -22,7 +16,6 @@
 
 // added below namespaces just to avoid using their names everywhere.
 using namespace std;
-using namespace boost::interprocess;
 
 typedef unsigned long long  UInt64;
 typedef long long           Int64 ;

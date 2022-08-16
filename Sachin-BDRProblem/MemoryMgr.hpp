@@ -2,11 +2,13 @@
 
 #include "Basics.hpp"
 
+void mutex_init(pthread_mutex_t *mutex);
+
 struct MemMgrMetaData {
 
 	MemMgrMetaData(){}
 
-	interprocess_mutex 	mutex;						// from boost library.
+	pthread_mutex_t 	mutex;
 	Int8				shName[SHM_NAME_SIZE];
 	UInt32				shmSize;
 	UInt32				freeOffset;					// start of free memory.
@@ -20,8 +22,6 @@ public:
 	
 	// Internal functions.
 	VPtr 		InternalGetSharedMemory_Posix(DicConfig *config);
-	VPtr		InternalGetSharedMemory(DicConfig * config);
-
 	// APIs
 	void		Initialize(DicConfig * config);
 	DicStatus	DeInitialize();
@@ -42,9 +42,5 @@ private:
 
 	MemMgrMetaData *		metaData;
 	VPtr					shmPtr;
-
-	// boost shared memory (alternate option)
-	shared_memory_object * 	shm;
-	mapped_region *			region;
 };
 

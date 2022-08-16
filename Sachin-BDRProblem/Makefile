@@ -1,6 +1,6 @@
 CC=g++
 CFLAGS=-c -Wall -g -O0
-LDFLAGS = -lrt -lpthread -lboost_system -std=c++11
+LDFLAGS = -lrt -lpthread  -std=c++11
 
 all: Dictionary
 

@@ -2,7 +2,6 @@
 
 #include "TrieStore.hpp"
 
-//#define DEFAULT_SHM_SIZE					134217728 // 2^27 
 #define DEFAULT_SHM_SIZE					1048576 // 2^20 
 
 class Dictionary {

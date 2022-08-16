@@ -1,33 +1,6 @@
 
 #include "TrieStore.hpp"
 
-void mutex_init(pthread_mutex_t *mutex)
-{
-
-	// mutex init
-	int rc;
-	pthread_mutexattr_t attr;
-
-	rc = pthread_mutexattr_init(&attr);
-	if (!rc)
-	{
-		rc = pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
-		if (!rc)
-		{
-			rc = pthread_mutex_init(mutex, &attr);
-			if (!rc)
-			{
-				rc = pthread_mutexattr_destroy(&attr);
-			}
-		}
-	}
-
-	if (rc)
-		exit(EXIT_FAILURE);
-
-	// TODO: handle erros as exceptions
-}
-
 TrieStore::TrieStore(bool init) {
 
 	// TODO: added extra param 'init' for debugging purpose. Remove it later.

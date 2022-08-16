@@ -33,7 +33,6 @@ public:
 
 private:
 
-		//interprocess_mutex 	mutex;
 		pthread_mutex_t			mutex;
 
 		UInt32 					nextTS[MAX_NEXT_TSNODES]; // 26*4 = 104 bytes

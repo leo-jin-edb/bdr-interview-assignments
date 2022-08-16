@@ -19,13 +19,41 @@ void print(VPtr addr, DicConfig * config) {
 
 }
 
+void mutex_init(pthread_mutex_t *mutex)
+{
+
+	// mutex init
+	int rc;
+	pthread_mutexattr_t attr;
+
+	rc = pthread_mutexattr_init(&attr);
+	if (!rc)
+	{
+		rc = pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+		if (!rc)
+		{
+			rc = pthread_mutex_init(mutex, &attr);
+			if (!rc)
+			{
+				rc = pthread_mutexattr_destroy(&attr);
+			}
+		}
+	}
+
+	if (rc)
+		exit(EXIT_FAILURE);
+
+	// TODO: handle erros as exceptions
+}
+
 MemoryMgr::MemoryMgr(DicConfig *config) {
 
 
 	shmPtr = InternalGetSharedMemory_Posix(config);
 
 	Initialize(config);
-
+	// TODO: handle race condition if 2 processes try to createSHM at the same time.
+	// We can open file in exclusive access mode, write SHM key to it & use it in another process to open SHM.
 };
 
 MemoryMgr* MemoryMgr::Obj(DicConfig * config) {
@@ -44,7 +72,10 @@ VPtr MemoryMgr::InternalGetSharedMemory_Posix(DicConfig * config) {
 
 	VPtr shmAddr;
 
+	// hardcoded key below. TODO: Change those to macro/constants. Also we can pass that to other processes thorough disk file.
 	if (config->shCreate) {
+
+		cout << "Creating Shared Memory" << endl;
 
 		int shmid =shmget((key_t)2345, config->shSize, 0666|IPC_CREAT); 
 		
@@ -81,44 +112,6 @@ VPtr MemoryMgr::InternalGetSharedMemory_Posix(DicConfig * config) {
 	return shmAddr;
 }
 
-VPtr MemoryMgr::InternalGetSharedMemory(DicConfig * config) {
-
-	VPtr shmAddr;
-
-	cout << "Config: \n create/open: " << config->shCreate << endl;
-	cout << "Name: " << config->shName << endl;
-	cout << "Size: " << config->shSize << endl;
-
-	if (config->shCreate) {
-
-		// remove old SHM with same name.
-		shared_memory_object::remove(config->shName);
-
-		cout << "Creating Shared Memory" << endl;
-		shm = new shared_memory_object(create_only, config->shName, read_write);
-		shm->truncate(config->shSize); //Set size
-	}
-	else {
-
-		cout << "Opening Shared Memory" << endl;
-		shm = new shared_memory_object(open_only, config->shName, read_write);
-	}
-
-	//Map the whole shared memory in this process
-	region = new mapped_region(*shm, read_write);
-
-	shmAddr = (VPtr)region->get_address();
-
-	if (shmAddr == nullptr) {
-		cout << "SHM Creation Failed." << endl;
-		exit(EXIT_FAILURE);
-	}
-
-	cout << "Shared Memory address : " << (UInt64)shmAddr << endl;
-
-	return shmAddr;
-}
-
 
 void MemoryMgr::Initialize(DicConfig * config) {
 
@@ -127,8 +120,13 @@ void MemoryMgr::Initialize(DicConfig * config) {
 		// allocate MemMgrMetaData
 		metaData = new (shmPtr) MemMgrMetaData;
 
-		// allocate MemMgrMetaData
-		scoped_lock<interprocess_mutex> lock(metaData->mutex);
+		mutex_init(&metaData->mutex);
+
+		if (pthread_mutex_lock(&metaData->mutex)) {
+			
+			cout << "SHM Errory. Exiting.\n";
+            exit(EXIT_FAILURE);
+		}
 
 		metaData->shmSize		= config->shSize;
 		memcpy(metaData->shName, config->shName, SHM_NAME_SIZE);
@@ -136,19 +134,33 @@ void MemoryMgr::Initialize(DicConfig * config) {
 		metaData->freeOffset	= sizeof(MemMgrMetaData);
 
 		cout << "MemMgr current offset: " << metaData->freeOffset << endl;
+
+		if (pthread_mutex_unlock(&metaData->mutex)) {
+			cout << "SHM Errory. Exiting.\n";
+			exit(EXIT_FAILURE);
+		}
 	}
 	else {
 
 		// allocate MemMgrMetaData
 		metaData =  (MemMgrMetaData *)shmPtr;
 
-		// allocate MemMgrMetaData
-		scoped_lock<interprocess_mutex> lock(metaData->mutex);
+		if (pthread_mutex_lock(&metaData->mutex)) {
+			
+			cout << "SHM Errory. Exiting.\n";
+            exit(EXIT_FAILURE);
+		}
 
-		if (strncmp(metaData->shName, config->shName, SHM_NAME_SIZE) != 0)
+		if (strncmp(metaData->shName, config->shName, SHM_NAME_SIZE) != 0) {
+
+			cout << "Something wrong in SHM\n";
 			exit(EXIT_FAILURE);
-		
-		cout << "MemMgr current offset: " << metaData->freeOffset << endl;
+		}
+		if (pthread_mutex_unlock(&metaData->mutex)) {
+			
+			cout << "SHM Errory. Exiting.\n";
+            exit(EXIT_FAILURE);
+		}
 	}
 
 }
@@ -158,16 +170,30 @@ DicStatus	MemoryMgr::DeInitialize() {
 	DicStatus rc = DIC_SUCCESS;
 	
 	// TODO: what is someone is using SHM currently? Handle graceful shutdown.
-	scoped_lock<interprocess_mutex> lock(metaData->mutex);
 
-	shared_memory_object::remove(metaData->shName);
+	if (pthread_mutex_lock(&metaData->mutex)) {
+		
+		cout << "SHM Errory. Exiting.\n";
+		exit(EXIT_FAILURE);
+	}
 
+	// TODO: add SHM remove function.
+	if (pthread_mutex_unlock(&metaData->mutex)) {
+			
+			cout << "SHM Errory. Exiting.\n";
+            exit(EXIT_FAILURE);
+		}
 	return rc;
 }	
 	
 UInt32 MemoryMgr::AllocMem(UInt32 size) {
 
-	scoped_lock<interprocess_mutex> lock(metaData->mutex);
+
+	if (pthread_mutex_lock(&metaData->mutex)) {
+			
+		cout << "SHM Errory. Exiting.\n";
+		exit(EXIT_FAILURE);
+	}
 
 	if ((metaData->freeOffset + size) >= metaData->shmSize)
 		exit(EXIT_FAILURE); // TODO: handle graciously. Try to extend SHM, if not we could exit?
@@ -176,13 +202,16 @@ UInt32 MemoryMgr::AllocMem(UInt32 size) {
 
 	metaData->freeOffset += size;
 
+	if (pthread_mutex_unlock(&metaData->mutex)) {
+			
+		cout << "SHM Errory. Exiting.\n";
+		exit(EXIT_FAILURE);
+	}
+
 	return ret;
 }
 
 VPtr MemoryMgr::GetAppDataBuff(UInt32 offset) {
-
-
-	scoped_lock<interprocess_mutex> lock(metaData->mutex);
 
 	VPtr ret = (VPtr)((BPtr)shmPtr +  sizeof(MemMgrMetaData) + offset);
 
