@@ -3,7 +3,7 @@
 
 MemoryMgr *			MemoryMgr::instance		= nullptr;
 
-void print(BPtr addr, DicConfig * config) {
+void print(VPtr addr, DicConfig * config) {
 
 
 	cout << "Complete Data: " << endl;
@@ -15,7 +15,7 @@ void print(BPtr addr, DicConfig * config) {
 	cout << "Name: " << config->shName << endl;
 	cout << "Size: " << config->shSize << endl;
 
-	cout << "\nShared Memory address : " << (UInt32)addr << endl;
+	cout << "\nShared Memory address : " << (UInt32 *)addr << endl;
 
 }
 
@@ -74,16 +74,11 @@ VPtr MemoryMgr::InternalGetSharedMemory_Posix(DicConfig * config) {
 		exit(EXIT_FAILURE);
 	}
 
-	cout << "\n -------Complete Data: -----------" << endl;
-	for (int i = 0; i < config->shSize; i++) {
-		printf("%x", *(((char *)shmAddr) + i));
-	}
-
 	cout << "\nConfig: \n create/open: " << config->shCreate << endl;
 	cout << "Name: " << config->shName << endl;
 	cout << "Size: " << config->shSize << endl;
 
-	cout << "\nShared Memory address : " << (UInt32)shmAddr << endl;
+	cout << "\nShared Memory address : " << (UInt32 *)shmAddr << endl;
 
 	return shmAddr;
 }
@@ -222,29 +217,38 @@ DicStatus	MemoryMgr::DeInitialize() {
 	return rc;
 }	
 	
-BPtr MemoryMgr::AllocMem(UInt32 size) {
+UInt32 MemoryMgr::AllocMem(UInt32 size) {
 
 	scoped_lock<interprocess_mutex> lock(metaData->mutex);
 
 	if ((metaData->freeOffset + size) >= metaData->shmSize)
 		exit(EXIT_FAILURE); // TODO: handle graciously. Try to extend SHM, if not we could exit?
 
-	BPtr ptr = (BPtr)((UInt64)shmPtr + metaData->freeOffset);
+	VPtr ptr = (VPtr)((BPtr)shmPtr + metaData->freeOffset);
+	UInt32 ret = metaData->freeOffset;
+
 	metaData->freeOffset += size;
 
-	cout << "MemMgr: shmPtr: " << (UInt64)shmPtr << ", ptr: " << (UInt64)ptr << ". New offset: " << metaData->freeOffset << endl;
+	cout << "MemMgr: shmPtr: " << (UInt32 *)shmPtr << ", ptr: " << (UInt32 *)ptr << "(" << ret 
+		 << "). New offset: " << metaData->freeOffset << endl;
 
-	return ptr;
+	return ret;
 }
 
-BPtr MemoryMgr::GetAppDataBuff(UInt32 offset) {
+VPtr MemoryMgr::GetAppDataBuff(UInt32 offset) {
 
 
 	scoped_lock<interprocess_mutex> lock(metaData->mutex);
 
-	cout << "MemMgr: shmPtr: " << (UInt64)shmPtr << ", AppData: " << (UInt64)shmPtr +  sizeof(MemMgrMetaData) + offset << endl;
+	VPtr ret = (VPtr)((BPtr)shmPtr +  sizeof(MemMgrMetaData) + offset);
 
-	return (BPtr)((UInt64)shmPtr +  sizeof(MemMgrMetaData) + offset);
+	cout << "MemMgr: shmPtr: " << (UInt32 *)shmPtr << ", AppData: " << (UInt32 *)ret << endl;
+
+	return ret;
+}
+
+VPtr MemoryMgr::Ptr(UInt32 offset) {
+	return (VPtr)((BPtr)shmPtr+offset);
 }
 
 void MemoryMgr::sleepfor(UInt64 msec) {

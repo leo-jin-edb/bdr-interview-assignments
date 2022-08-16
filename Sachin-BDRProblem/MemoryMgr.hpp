@@ -27,8 +27,10 @@ public:
 	void		Initialize(DicConfig * config);
 	DicStatus	DeInitialize();
 
-	BPtr		AllocMem(UInt32 size);
-	BPtr		GetAppDataBuff(UInt32 offset);
+	UInt32		AllocMem(UInt32 size);
+	VPtr		GetAppDataBuff(UInt32 offset);
+
+	VPtr		Ptr(UInt32 offset);
 
 // TODO: Debugging purpose. Delete later.
 	static void sleepfor(UInt64 msec);

@@ -1,7 +1,30 @@
 
 #include "TrieStore.hpp"
+char peek(TrieStore *ts)
+{
 
-void mutex_init(pthread_mutex_t *mutex) {
+return ts->c;
+/*
+	switch (i)
+	{
+	case 0:
+		return (VPtr)ts->c;
+	case 1:
+		return (VPtr)ts->parent;
+	case 2:
+		return (VPtr)ts->defLen;
+	case 3:
+		return (VPtr)ts->wordPtr;
+	default:
+		return nullptr;
+	};
+
+	return nullptr;
+	*/
+}
+
+void mutex_init(pthread_mutex_t *mutex)
+{
 
 	// mutex init
 	int rc;
@@ -32,8 +55,8 @@ TrieStore::TrieStore(TrieStore *p, char mych, bool mutexinit) {
 
 	if (mutexinit)
 	{
-		memset(nextTS, 0, sizeof(TrieStore *) * MAX_NEXT_TSNODES);
-		wordPtr = nullptr;
+		memset(nextTS, 0, sizeof(nextTS[0]) * MAX_NEXT_TSNODES);
+		wordPtr = 0;
 		parent = p;
 		c = mych;
 
@@ -59,13 +82,16 @@ DicStatus TrieStore::InsertWord(UInt32 i, const string word, const string defini
 		{
 
 			// reached destination TS node.
-			if (wordPtr == nullptr)
+			if (wordPtr == 0)
 			{
 
 				defLen = definition.size();
+				BPtr ptr;
 
 				wordPtr = MemoryMgr::Obj()->AllocMem(defLen);
-				memcpy(wordPtr, definition.c_str(), defLen);
+				ptr = (BPtr)MemoryMgr::Obj()->Ptr(wordPtr);
+
+				memcpy(ptr, definition.c_str(), defLen);
 			}
 			else
 			{
@@ -75,18 +101,17 @@ DicStatus TrieStore::InsertWord(UInt32 i, const string word, const string defini
 		}
 		else {
 			char ch = word[i + 1];
-			VPtr ptr = nullptr;
+			BPtr ptr = nullptr;
 			bool init = false;
 
 			if (!nextTS[IndexOf(ch)]) {
 
-				ptr = MemoryMgr::Obj()->AllocMem(sizeof(TrieStore));
-				nextTS[IndexOf(ch)]	= ptr;
+				nextTS[IndexOf(ch)] = MemoryMgr::Obj()->AllocMem(sizeof(TrieStore));
 				init = true;
-			}
-			else
-				ptr = nextTS[IndexOf(ch)];
-				
+			}			
+
+			ptr = (BPtr)MemoryMgr::Obj()->Ptr(nextTS[IndexOf(ch)]);
+
 			nextPtr = new (ptr) TrieStore(this, ch, init);
 
 			// if mem allocation have failed, nextPtr would be still null
@@ -120,9 +145,9 @@ DicStatus TrieStore::DeleteWord(UInt32 i, const string word) {
 		if (i == word.size() - 1) {
 
 			// reached destination TS node.
-			if (wordPtr != nullptr) {
+			if (wordPtr != 0) {
 
-				wordPtr = nullptr;
+				wordPtr = 0;
 
 				// TODO: memory leakage here is not handled as MemMgr do now support defragmented memory currently. 
 				// This can be improved by adding free chunks management using buckets of size 32/64/128/256/512/etc. 12 to 16 such buckets(of lists of chunks) should suffice.
@@ -132,11 +157,15 @@ DicStatus TrieStore::DeleteWord(UInt32 i, const string word) {
 		}
 		else {
 			char ch = word[i + 1];
+			BPtr ptr;
 
-			if (nextTS[IndexOf(ch)] == nullptr)
+			if (nextTS[IndexOf(ch)] == 0)
 				rc = TST_WORD_DOESNOT_EXIST;
-			else
-				nextPtr = new (nextTS[IndexOf(ch)]) TrieStore(this, ch, false);
+			else {
+
+				ptr = (BPtr)MemoryMgr::Obj()->Ptr(nextTS[IndexOf(ch)]);
+				nextPtr = new (ptr) TrieStore(this, ch, false);
+			}
 		}
 
 		if (pthread_mutex_unlock(&mutex))
@@ -165,18 +194,26 @@ DicStatus TrieStore::SearchWord(UInt32 i, const string word, string & definition
 		if (i == word.size() - 1) {
 
 			// reached destination TS node.
-			if (wordPtr != nullptr)
-				definition = string(wordPtr, wordPtr + defLen);
+			if (wordPtr != 0) {
+
+				BPtr ptr = (BPtr)MemoryMgr::Obj()->Ptr(wordPtr);
+
+				definition = string(ptr, ptr + defLen);
+			}
 			else
 				rc = TST_WORD_DOESNOT_EXIST;
 		}
 		else {
 			char ch = word[i + 1];
+			BPtr ptr;
 
-			if (nextTS[IndexOf(ch)] == nullptr)
+			if (nextTS[IndexOf(ch)] == 0)
 				rc = TST_WORD_DOESNOT_EXIST;
-			else
-				nextPtr = new (nextTS[IndexOf(ch)]) TrieStore(this, ch, false);
+			else {
+
+				ptr = (BPtr)MemoryMgr::Obj()->Ptr(nextTS[IndexOf(ch)]);
+				nextPtr = new (ptr) TrieStore(this, ch, false);
+			}
 		}
 
 		if (pthread_mutex_unlock(&mutex))
@@ -207,7 +244,9 @@ TrieStoreMgr::TrieStoreMgr(DicConfig * config) {
 
 			if (config->shCreate) {
 
-				TrieStore *ptr = (TrieStore *)memMgr->AllocMem(sizeof(TrieStore));
+				UInt32 offset = memMgr->AllocMem(sizeof(TrieStore));
+
+				TrieStore *ptr = (TrieStore *)memMgr->Ptr(offset);
 
 				tsHead[i] = new (ptr) TrieStore((TrieStore *)this, 'a'+ i, true);
 			}
