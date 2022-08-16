@@ -3,6 +3,22 @@
 
 MemoryMgr *			MemoryMgr::instance		= nullptr;
 
+void print(BPtr addr, DicConfig * config) {
+
+
+	cout << "Complete Data: " << endl;
+	for (int i = 0; i < 0; i++) {
+		cout << ((BPtr)addr + i)[0];
+	}
+
+	cout << "Config: \n create/open: " << config->shCreate << endl;
+	cout << "Name: " << config->shName << endl;
+	cout << "Size: " << config->shSize << endl;
+
+	cout << "\nShared Memory address : " << (UInt32)addr << endl;
+
+}
+
 MemoryMgr::MemoryMgr(DicConfig *config) {
 
 
@@ -28,20 +44,15 @@ VPtr MemoryMgr::InternalGetSharedMemory_Posix(DicConfig * config) {
 
 	VPtr shmAddr;
 
-	cout << "Config: \n create/open: " << config->shCreate << endl;
-	cout << "Name: " << config->shName << endl;
-	cout << "Size: " << config->shSize << endl;
-	cout << "Handle: " << config->handle << endl;
-
 	if (config->shCreate) {
-
-		
 
 		int shmid =shmget((key_t)2345, config->shSize, 0666|IPC_CREAT); 
 		
 		printf("Key of shared memory is %d\n",shmid);
 
 		shmAddr = shmat(shmid,NULL,0);
+
+		memset(shmAddr, 0,config->shSize);
 
 		// pass this argument as parameter to another process, opening SHM.
 		//cout << "------->> SHM Handle: " << handle << "------- " << endl;
@@ -58,15 +69,21 @@ VPtr MemoryMgr::InternalGetSharedMemory_Posix(DicConfig * config) {
 	}
 
 
-	if (shmAddr == nullptr)
-		exit(EXIT_FAILURE); // possibly due to race condition. 2 parallel processes trying to create 
-
 	if (shmAddr == nullptr) {
 		cout << "SHM Creation Failed." << endl;
 		exit(EXIT_FAILURE);
 	}
 
-	cout << "Shared Memory address : " << (UInt32)shmAddr << endl;
+	cout << "\n -------Complete Data: -----------" << endl;
+	for (int i = 0; i < config->shSize; i++) {
+		printf("%x", *(((char *)shmAddr) + i));
+	}
+
+	cout << "\nConfig: \n create/open: " << config->shCreate << endl;
+	cout << "Name: " << config->shName << endl;
+	cout << "Size: " << config->shSize << endl;
+
+	cout << "\nShared Memory address : " << (UInt32)shmAddr << endl;
 
 	return shmAddr;
 }

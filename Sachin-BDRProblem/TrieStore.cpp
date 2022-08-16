@@ -28,14 +28,17 @@ void mutex_init(pthread_mutex_t *mutex) {
 }
 
 // TODO: Params p & c added for debugging only. Remove later.
-TrieStore::TrieStore(TrieStore *p, char mych) {
+TrieStore::TrieStore(TrieStore *p, char mych, bool mutexinit) {
 
-	memset(nextTS, 0, sizeof(TrieStore*) * MAX_NEXT_TSNODES);
-	wordPtr = nullptr;
-	parent = p;
-	c = mych;
-	
-	mutex_init(&mutex);
+	if (mutexinit)
+	{
+		memset(nextTS, 0, sizeof(TrieStore *) * MAX_NEXT_TSNODES);
+		wordPtr = nullptr;
+		parent = p;
+		c = mych;
+
+		mutex_init(&mutex);
+	}
 }
 
 DicStatus TrieStore::InsertWord(UInt32 i, const string word, const string definition)
@@ -72,16 +75,22 @@ DicStatus TrieStore::InsertWord(UInt32 i, const string word, const string defini
 		}
 		else {
 			char ch = word[i + 1];
-			BPtr ptr = nullptr;
+			VPtr ptr = nullptr;
+			bool init = false;
 
 			if (!nextTS[IndexOf(ch)]) {
 
 				ptr = MemoryMgr::Obj()->AllocMem(sizeof(TrieStore));
-				nextTS[IndexOf(ch)] = new (ptr) TrieStore(this, ch);
+				nextTS[IndexOf(ch)]	= ptr;
+				init = true;
 			}
+			else
+				ptr = nextTS[IndexOf(ch)];
+				
+			nextPtr = new (ptr) TrieStore(this, ch, init);
 
 			// if mem allocation have failed, nextPtr would be still null
-			nextPtr = static_cast<TrieStore *>(nextTS[IndexOf(ch)]);
+			//nextPtr = static_cast<TrieStore *>(nextTS[IndexOf(ch)]);
 		}
 
 		if (pthread_mutex_unlock(&mutex))
@@ -123,10 +132,11 @@ DicStatus TrieStore::DeleteWord(UInt32 i, const string word) {
 		}
 		else {
 			char ch = word[i + 1];
-			nextPtr = static_cast<TrieStore *>(nextTS[IndexOf(ch)]);
 
-			if (nextPtr == nullptr)
+			if (nextTS[IndexOf(ch)] == nullptr)
 				rc = TST_WORD_DOESNOT_EXIST;
+			else
+				nextPtr = new (nextTS[IndexOf(ch)]) TrieStore(this, ch, false);
 		}
 
 		if (pthread_mutex_unlock(&mutex))
@@ -162,10 +172,11 @@ DicStatus TrieStore::SearchWord(UInt32 i, const string word, string & definition
 		}
 		else {
 			char ch = word[i + 1];
-			nextPtr = static_cast<TrieStore *>(nextTS[IndexOf(ch)]);
 
-			if (nextPtr == nullptr)
+			if (nextTS[IndexOf(ch)] == nullptr)
 				rc = TST_WORD_DOESNOT_EXIST;
+			else
+				nextPtr = new (nextTS[IndexOf(ch)]) TrieStore(this, ch, false);
 		}
 
 		if (pthread_mutex_unlock(&mutex))
@@ -198,7 +209,7 @@ TrieStoreMgr::TrieStoreMgr(DicConfig * config) {
 
 				TrieStore *ptr = (TrieStore *)memMgr->AllocMem(sizeof(TrieStore));
 
-				tsHead[i] = new (ptr) TrieStore((TrieStore *)this, 'a'+ i);
+				tsHead[i] = new (ptr) TrieStore((TrieStore *)this, 'a'+ i, true);
 			}
 			else {
 

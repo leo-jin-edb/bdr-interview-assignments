@@ -20,7 +20,7 @@ class TrieStore {
 public:
 
 	// TODO: extra parameters added for debugging. Delete later.
-	TrieStore(TrieStore * parent, char c);
+	TrieStore(TrieStore * parent, char c, bool mutexinit);
 	// TODO: ~TrieStore(); call MemMgr DeInitialize.
 		
 	DicStatus InsertWord(UInt32 i, const string word, const string definition);
@@ -37,7 +37,7 @@ private:
 		//interprocess_mutex 	mutex;
 		pthread_mutex_t			mutex;
 
-		TrieStore *			nextTS[MAX_NEXT_TSNODES]; // 26*4 = 104 bytes
+		VPtr 					nextTS[MAX_NEXT_TSNODES]; // 26*4 = 104 bytes
 
 		// self word (at current location)
 	
