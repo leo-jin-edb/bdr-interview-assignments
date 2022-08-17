@@ -8,7 +8,7 @@ class Dictionary {
 
     public:
 
-        Dictionary(UInt64 handle);
+        Dictionary(string pCreateShm);
 
         DicStatus InsertWord(const string word, const string definition);
         DicStatus DeleteWord(const string word);

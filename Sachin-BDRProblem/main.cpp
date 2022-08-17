@@ -6,11 +6,11 @@
 Dictionary *dict;
 DicStatus rc;
 
-void initialize(UInt64 handle) {
+void initialize(string createShm) {
 
     cout << "================  Initializing  ==================" << endl;
 
-    dict = new Dictionary(handle);
+    dict = new Dictionary(createShm);
 
 }
 
@@ -73,7 +73,6 @@ void TestBasicCases() {
     string def = "A small part or quantity intended to show what the whole is like: investigations involved analyzing samples of handwriting";
     insert(word, def);
 
-/*
     // insert word that is already inserted earlier.
     insert(word, def);
 
@@ -110,7 +109,7 @@ void TestBasicCases() {
     // search newly inserted word (which was deleted earlier)
     word = "hint";
     search(word);
-    */
+    
 }
 
 
@@ -181,16 +180,16 @@ int main (int argc, char *argv[]) {
         return -1;
     }
     
-    UInt32 handle;
+    string createShm;
 
     //Obtain handle value
     std::stringstream s;
     s << argv[1];
-    s >> handle;
+    s >> createShm;
 
-    cout << "Input Handle: " << handle << endl;
+    cout << "Input Arg: " << createShm << endl;
 
-    initialize(handle);
+    initialize(createShm);
 
     TestBasicCases();
 

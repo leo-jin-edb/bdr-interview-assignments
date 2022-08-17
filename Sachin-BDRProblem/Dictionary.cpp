@@ -1,11 +1,18 @@
 #include "Dictionary.hpp"
 
-Dictionary::Dictionary(UInt64 handle) {
+Dictionary::Dictionary(string pCreateSHM) {
 
-    bool createSHM = true;
+    bool createSHM = false;
 
-    if (handle)
-        createSHM = false;
+	transform(pCreateSHM.begin(), pCreateSHM.end(), pCreateSHM.begin(), ::tolower);
+
+    if (pCreateSHM == "create")
+        createSHM = true;
+    else if (pCreateSHM != "open") {
+
+        cerr << "\n**************** Wrong Usage! ****************\n\nCorrect Usage is: ./Dictionary create/open.\n" << endl;
+        exit(EXIT_FAILURE); // invalid param.
+    }
 
     DicConfig config = {
                 createSHM,
