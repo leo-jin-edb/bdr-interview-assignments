@@ -175,7 +175,6 @@ DicStatus TrieStore::SearchWord(UInt32 i, const string word, string & definition
 	return rc;
 }
 
-
 ///////////// TrieStoreMgr APIs ////////////////////////
 
 TrieStoreMgr::TrieStoreMgr(DicConfig * config) {

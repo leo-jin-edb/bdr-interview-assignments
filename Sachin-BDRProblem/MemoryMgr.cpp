@@ -171,13 +171,17 @@ DicStatus	MemoryMgr::DeInitialize() {
 	
 	// TODO: what is someone is using SHM currently? Handle graceful shutdown.
 
+
 	if (pthread_mutex_lock(&metaData->mutex)) {
 		
 		cout << "SHM Errory. Exiting.\n";
 		exit(EXIT_FAILURE);
 	}
 
-	// TODO: add SHM remove function.
+	// TODO: add SHM remove function. Code is not added currently because other process may be using it. This needs to be handled gracefully.
+
+	instance = nullptr;
+
 	if (pthread_mutex_unlock(&metaData->mutex)) {
 			
 			cout << "SHM Errory. Exiting.\n";

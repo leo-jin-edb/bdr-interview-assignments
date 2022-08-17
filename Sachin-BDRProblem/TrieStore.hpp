@@ -7,26 +7,15 @@
 
 const UInt8 MAX_NEXT_TSNODES = 26;
 
-// TODO: Check if all state variables below need to be defined as volatile. Doesn't seem to be a need as of now, because every data access is only with 'SyncFlag' which is volatile.
-
-/*
-* 1) Holds specific store's info. Mapped in Shared Memory space.
-* 2) When any word is deleted, we free 'selfWordPtr' memory & just mark it null. We don't delete Trie Node.
-*
-*/
 
 class TrieStore {
 
 public:
 
-	// TODO: extra parameter added for debugging. Delete later.
-	TrieStore(bool init);
-	// TODO: ~TrieStore(); call MemMgr DeInitialize.
-		
+	TrieStore(bool init);	
+
 	DicStatus InsertWord(UInt32 i, const string word, const string definition);
 
-	// TODO: memory leakage here is not handled as MemMgr do now support defragmented memory currently. 
-	// This can be improved by adding free chunks management using buckets of size 32/64/128/256/512/etc. 12 to 16 such buckets(of lists of chunks) should suffice.
 	DicStatus DeleteWord(UInt32 i, const string word);
 
 	DicStatus SearchWord(UInt32 i, const string word, string & definition);
@@ -49,6 +38,10 @@ class TrieStoreMgr {
 public:
 
 	TrieStoreMgr(DicConfig * config);
+
+	~TrieStoreMgr() {
+		MemoryMgr::DeInitialize();
+	}
 
 	DicStatus InsertWord(string word, const string definition);
 	DicStatus DeleteWord(string word);

@@ -38,8 +38,6 @@ private:
 	// Defined private in order to prevent instantiating this class as all members are used as static.
 	MemoryMgr(DicConfig *config);
 
-	// TODO: ~MemoryMgr(BPtr shm);  call DeInitialize, remove SHM
-
 	MemMgrMetaData *		metaData;
 	VPtr					shmPtr;
 };
