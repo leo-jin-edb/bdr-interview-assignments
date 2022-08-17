@@ -1,0 +1,9 @@
+.vs
+.vscode
+*/.vscode/*
+*/.vs/*
+*.o
+*/Dictionary
+*.swp
+
+Sachin-BDRProblem/bp
