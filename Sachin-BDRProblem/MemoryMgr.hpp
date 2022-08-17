@@ -18,13 +18,13 @@ class MemoryMgr {
 
 public:
 
-	static MemoryMgr * Obj(DicConfig *config = nullptr);
+	static MemoryMgr * 	Obj(DicConfig *config = nullptr);
+	static DicStatus	DeInitialize();
 	
 	// Internal functions.
 	VPtr 		InternalGetSharedMemory_Posix(DicConfig *config);
 	// APIs
 	void		Initialize(DicConfig * config);
-	DicStatus	DeInitialize();
 
 	UInt32		AllocMem(UInt32 size);
 	VPtr		GetAppDataBuff(UInt32 offset);

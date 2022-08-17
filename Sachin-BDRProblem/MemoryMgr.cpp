@@ -171,8 +171,9 @@ DicStatus	MemoryMgr::DeInitialize() {
 	
 	// TODO: what is someone is using SHM currently? Handle graceful shutdown.
 
+	MemoryMgr * obj = MemoryMgr::Obj();
 
-	if (pthread_mutex_lock(&metaData->mutex)) {
+	if (pthread_mutex_lock(&obj->metaData->mutex)) {
 		
 		cout << "SHM Errory. Exiting.\n";
 		exit(EXIT_FAILURE);
@@ -182,7 +183,7 @@ DicStatus	MemoryMgr::DeInitialize() {
 
 	instance = nullptr;
 
-	if (pthread_mutex_unlock(&metaData->mutex)) {
+	if (pthread_mutex_unlock(&obj->metaData->mutex)) {
 			
 			cout << "SHM Errory. Exiting.\n";
             exit(EXIT_FAILURE);
